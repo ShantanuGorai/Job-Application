@@ -1,0 +1,63 @@
+{
+    "candidate_name": "Shantanu Gorai",
+    "contact_info": {
+        "email": "shantanugorai013@gmail.com",
+        "phone": "+91 70619 36584",
+        "linkedin": "linkedin.com/in/shantanu-gorai",
+        "github": "github.com/ShantanuGorai"
+    },
+    "education": [
+        "Bachelor of Engineering – Computer Science 2023 – 2027 | ACS College of Engineering, Bengaluru (VTU Affiliated) Bengaluru, Karnataka"
+    ],
+    "experience": {
+        "duration_mentions": [],
+        "roles_and_companies": [
+            "V ocational T rainee — Image Recognition using Machine Learning Apr 2026 – May 2026",
+            "Tata Steel Ltd., Learning & Development Department Jamshedpur, Jharkhand",
+            " Built an end-to-end image classification pipeline — data preprocessing, feature extraction, model training, and evaluation — within",
+            "an industrial production environment."
+        ]
+    },
+    "projects": [
+        {
+            "title": "V ocalLock — AI V oice Authentication & Spoof Detection System | Python, Flask, AI/ML, React.js, PostgreSQL 2025",
+            "description": " Architected a full-stack voice biometric authentication system with spoof detection, user registration workflows, and a secure"
+        },
+        {
+            "title": "JWTauthenticated API layer.",
+            "description": " Built a React.js frontend integrated with a Flask REST API backend; implemented PostgreSQL-backed user management with encrypted credential storage.  Runner-Up at CODE CARNAGE National Hackathon (Apr 2025) — delivered end-to-end under 24-hour constraints."
+        },
+        {
+            "title": "Real Estate Listing & Property Search Platform | HTML5, CSS3, JavaScript, React.js, Node.js, Express.js, MongoDB 2025",
+            "description": " Developed a responsive property search platform with dynamic listing browsing, search/filter functionality, and an interactive UI built using React.js and Tailwind CSS.  Engineered a Node.js/Express.js REST API backend with MongoDB for property data management, supporting CRUD operations and paginated query responses.  Implemented component-driven frontend architecture with clean state management and mobile-responsive design across all device breakpoints."
+        },
+        {
+            "title": "RealTime Network Intrusion Detection System (IDS) | Python, Flask, Scikitlearn, Scapy, React.js, WebSockets 2025",
+            "description": " Built a full-stack security platform — Python/Flask/Scapy backend for live packet sniffing, a trained ML classifier for threat prediction, and a React.js real-time dashboard.  Designed and exposed a Flask REST API serving live ML inference via WebSockets; engineered a complete data preprocessing pipeline from raw packets to model input."
+        },
+        {
+            "title": "Geographic V elocity Anomaly Engine (Impossible T ravel Detector) | Python, Flask, REST API, IP Geolocation 2025",
+            "description": " Designed an algorithmic risk-scoring engine detecting compromised credentials by computing geographic velocity between consecutive login events via IP Geolocation APIs.  Exposed detection logic as a production-style REST API with structured alert output and documented edge-case thresholding methodology."
+        }
+    ],
+    "skills": [
+        "Angular",
+        "Bootstrap",
+        "Classification",
+        "Docker",
+        "Git",
+        "Javascript",
+        "Linux",
+        "Machine Learning",
+        "Next.Js",
+        "Python",
+        "React",
+        "React.Js",
+        "Redux Toolkit",
+        "Responsive Design",
+        "Sql",
+        "Tailwind Css",
+        "Time",
+        "Typescript"
+    ]
+}

@@ -1,0 +1,121 @@
+{
+    "candidate_name": "Shantanu Gorai",
+    "contact_info": {
+        "email": "shantanugorai013@gmail.com",
+        "phone": "+91 70619 36584",
+        "linkedin": "linkedin.com/in/shantanu-gorai",
+        "github": "github.com/ShantanuGorai"
+    },
+    "education": [
+        "Bachelor of Engineering – Computer Science2023 – 2027 | ACS College of Engineering, Bengaluru (VTU Affiliated) Bengaluru, Karnataka"
+    ],
+    "experience": {
+        "duration_mentions": [],
+        "roles_and_companies": [
+            "V ocational T rainee — Machine Learning & Digital SystemsApr 2026 – May 2026",
+            "Tata Steel Ltd., Learning & Development Department Jamshedpur, Jharkhand",
+            "operations.",
+            "stakeholders."
+        ]
+    },
+    "projects": [
+        {
+            "title": "RealTime Network Monitoring & Threat T riage System|Python, Flask, WebSockets, React.js, Linux2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Engineered a realtime diagnostics dashboard tracking network traffic anomalies, packet drops, and threat events using Python packet",
+            "description": "sniffers and WebSockets."
+        },
+        {
+            "title": "Implemented automated error logging and structured alerting mechanisms to facilitate rapid rootcause isolation and incident",
+            "description": "response."
+        },
+        {
+            "title": "Troubleshot performance degradation under high event throughput by optimizing multithreaded data processing handlers.",
+            "description": "No description provided."
+        },
+        {
+            "title": "V ocalLock — Secure User Authentication & Service Gateway|Python, Flask, MySQL, REST API, React.js2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Designed and debugged a secure multitier authentication platform handling session validations, rolebased access, and token lifecycle",
+            "description": "management."
+        },
+        {
+            "title": "Analyzed API error logs via Postman and Flask debug loggers to resolve database deadlocks and invalid payload edge cases.",
+            "description": "No description provided."
+        },
+        {
+            "title": "RunnerUp, CODE CARNAGE National Hackathon (Apr 2025)— Built, debugged, and deployed a productiongrade",
+            "description": "application under a strict 24-hour sprint."
+        },
+        {
+            "title": "AI Smart Attendance & Academic Analytics Portal|Python, Flask, PostgreSQL, Generative AI APIs2024",
+            "description": "No description provided."
+        },
+        {
+            "title": "Developed an automated reporting service integrating AI summarization pipelines for automated anomaly detection in student",
+            "description": "attendance records."
+        },
+        {
+            "title": "Resolved complex PostgreSQL schema bottlenecks and query execution timeouts, improving data retrieval speeds for multiuser",
+            "description": "concurrent access."
+        },
+        {
+            "title": "Conducted continuous endtoend integration testing between frontend states and backend API error handlers.",
+            "description": "No description provided."
+        },
+        {
+            "title": "MultiT enant Property Listing Platform|Node.js, Express.js, MongoDB, React.js2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Maintained backend CRUD operations, indexing strategies, and API routes to resolve pagination failures and highlatency data",
+            "description": "queries."
+        },
+        {
+            "title": "Implemented structured HTTP status code handling and clientside error boundaries to improve application resilience.",
+            "description": "No description provided."
+        }
+    ],
+    "skills": [
+        "Anomaly Detection",
+        "Api Debugging",
+        "Backend & Apis:Flask",
+        "Bash",
+        "Data Pipelines",
+        "Docker",
+        "Express.Js",
+        "Git",
+        "Incident Management",
+        "Javascript",
+        "Jwt",
+        "Linux",
+        "Llm Api Integration",
+        "Log Analysis",
+        "Machine Learning",
+        "Microservices",
+        "Ml Model Deployment",
+        "Mongodb",
+        "Monitoring",
+        "Mysql",
+        "Next.Js",
+        "Node.Js",
+        "Postman",
+        "Python",
+        "React",
+        "React.Js",
+        "Regression",
+        "Restful Apis",
+        "Shell Scripting",
+        "Sql",
+        "Tailwind Css",
+        "Time",
+        "Typescript",
+        "Unix",
+        "Vercel",
+        "Websockets"
+    ]
+}

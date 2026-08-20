@@ -1,0 +1,103 @@
+{
+    "candidate_name": "Shantanu Gorai",
+    "contact_info": {
+        "email": "shantanugorai013@gmail.com",
+        "phone": "+91 70619 36584",
+        "linkedin": "linkedin.com/in/shantanu-gorai",
+        "github": "github.com/ShantanuGorai"
+    },
+    "education": [
+        "Bachelor of Engineering – Computer Science 2023 – 2027 | ACS College of Engineering, Bengaluru (VTU Affiliated) Bengaluru, Karnataka"
+    ],
+    "experience": {
+        "duration_mentions": [],
+        "roles_and_companies": [
+            "V ocational T rainee — Image Recognition using Machine Learning Apr 2026 – May 2026",
+            "Tata Steel Ltd., Learning & Development Department Jamshedpur, Jharkhand",
+            " Built an end-to-end image classification pipeline: preprocessing (normalization, augmentation), feature extraction, model training,",
+            "and evaluation using Precision, Recall, F1, and Confusion Matrix."
+        ]
+    },
+    "projects": [
+        {
+            "title": "RealTime Network Intrusion Detection System (IDS) | Python, Scikitlearn, Flask, Scapy, REST API, WebSockets 2025",
+            "description": " Performed EDA on network telemetry to identify traffic patterns, class imbalance, and anomalous feature distributions; engineered features from raw packet attributes (protocol, port, payload size, inter-arrival time).  Trained and evaluated a supervised classifier using Precision, Recall, F1, ROC-AUC, and Confusion Matrix; established baselines and compared multiple algorithms before selecting final architecture.  Deployed trained model as a Flask REST API serving real-time inference, streaming live threat predictions to a monitoring dashboard via WebSockets."
+        },
+        {
+            "title": "AI Student Productivity & Behavioral Analytics Dashboard | Python, Scikitlearn, Pandas, PostgreSQL, Flask 2025",
+            "description": " Preprocessed multi-source time-series behavioral data (timetables, mood logs, sleep records); handled missing values, outliers, encoding, and normalization for ML pipeline readiness.  Applied clustering (unsupervised segmentation) and time-series modeling to predict student stress risk; ran structured experiments across algorithm/feature combinations with documented methodology and results.  Exposed predictions via Flask REST API integrated with a React/Next.js frontend; used PostgreSQL for structured data persistence."
+        },
+        {
+            "title": "Geographic V elocity Anomaly Engine (Impossible T ravel Detector) | Python, Flask, IP Geolocation API, Risk Scoring 2025",
+            "description": " Designed an anomaly detection and algorithmic risk-scoring system analyzing user authentication behavioral data — computing geographic velocity between login events to flag impossible travel sequences.  Enriched data via live IP Geolocation APIs; applied iterative threshold calibration with documented edge-case analysis; exposed the engine as a production-style REST API with structured alert output."
+        }
+    ],
+    "skills": [
+        "Anomaly Detection",
+        "Behavioral Modeling",
+        "Classification",
+        "Clustering",
+        "Cross",
+        "Git",
+        "Hyperparameter Tuning",
+        "Javascript",
+        "Machine Learning",
+        "Next.Js",
+        "Python",
+        "React",
+        "Regression",
+        "Regularization",
+        "Series Analysis",
+        "Sql",
+        "Time",
+        "Typescript",
+        "Validation"
+    ],
+    "live_recruiting_companies": [
+        {
+            "company": "Mitre Media",
+            "role": "Tech Lead Full-Stack Rails Engineer",
+            "category": "Software Development",
+            "job_type": "full_time",
+            "location": "USA, Canada, USA timezones",
+            "live_application_url": "https://remotive.com/remote-jobs/software-development/tech-lead-full-stack-rails-engineer-2069746",
+            "source": "Live Remotive Feed"
+        },
+        {
+            "company": "TELUS Digital",
+            "role": "Face Deduplication Collection",
+            "category": "All others",
+            "job_type": "part_time",
+            "location": "USA",
+            "live_application_url": "https://remotive.com/remote-jobs/all-others/face-deduplication-collection-2091093",
+            "source": "Live Remotive Feed"
+        },
+        {
+            "company": "Coalition Technologies ",
+            "role": "Remote Office Assistant",
+            "category": "Marketing",
+            "job_type": "full_time",
+            "location": "Worldwide",
+            "live_application_url": "https://remotive.com/remote-jobs/marketing/remote-office-assistant-1680495",
+            "source": "Live Remotive Feed"
+        },
+        {
+            "company": "Credit Wellness, LLC",
+            "role": "Inside Sales Contractor",
+            "category": "Sales",
+            "job_type": "full_time",
+            "location": "Worldwide",
+            "live_application_url": "https://remotive.com/remote-jobs/sales/inside-sales-contractor-2086540",
+            "source": "Live Remotive Feed"
+        },
+        {
+            "company": "Unio Digital",
+            "role": "Tier III Service Desk Engineer",
+            "category": "Information Technology",
+            "job_type": "full_time",
+            "location": "Worldwide",
+            "live_application_url": "https://remotive.com/remote-jobs/information-technology/tier-iii-service-desk-engineer-2091045",
+            "source": "Live Remotive Feed"
+        }
+    ]
+}

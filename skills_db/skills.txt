@@ -1,0 +1,58 @@
+aws
+c++
+cyber security
+docker
+git
+javascript
+kubernetes
+linux
+machine learning
+python
+react
+sql
+typescript
+angular
+next.js
+bootstrap
+react.js
+redux toolkit
+tailwind css
+classification
+regression
+clustering
+series analysis
+validation
+hyperparameter tuning
+regularization
+behavioral modeling
+cross
+time
+anomaly detection
+responsive design
+jwt
+express.js
+postman
+ml model deployment
+incident management
+bash
+backend & apis:flask
+data pipelines
+websockets
+unix
+restful apis
+node.js
+log analysis
+monitoring
+mongodb
+mysql
+llm api integration
+vercel
+microservices
+api debugging
+shell scripting
+time-series analysis
+cross-validation
+scapy (network data processing)
+ml f rameworks: scikit-learn
+numpy
+pandas

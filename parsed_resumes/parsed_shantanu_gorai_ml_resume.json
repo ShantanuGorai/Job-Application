@@ -1,0 +1,61 @@
+{
+    "candidate_name": "Shantanu Gorai",
+    "contact_info": {
+        "email": "shantanugorai013@gmail.com",
+        "phone": "+91 70619 36584",
+        "linkedin": "linkedin.com/in/shantanu-gorai",
+        "github": "github.com/ShantanuGorai"
+    },
+    "education": [
+        "Bachelor of Engineering – Computer Science 2023 – 2027 | ACS College of Engineering, Bengaluru (VTU Affiliated) Bengaluru, Karnataka"
+    ],
+    "experience": {
+        "duration_mentions": [],
+        "roles_and_companies": [
+            "V ocational T rainee — Image Recognition using Machine Learning Apr 2026 – May 2026",
+            "Tata Steel Ltd., Learning & Development Department Jamshedpur, Jharkhand",
+            " Developed an image recognition system using supervised ML techniques within Tata Steel’s industrial training environment.",
+            " Designed and evaluated classification pipelines on real-world image datasets, applying feature extraction and model performance"
+        ]
+    },
+    "projects": [
+        {
+            "title": "RealTime Network Intrusion Detection System (IDS) | Python, Flask, Scikitlearn, Scapy, React.js, WebSockets 2025",
+            "description": " Trained a supervised classification model on network telemetry features to distinguish benign vs. malicious traffic with real-time inference.  Built a live preprocessing pipeline using Scapy to parse raw packet attributes on the fly as direct model input.  Served ML predictions via Flask REST API with WebSocket streaming to a React.js + Tailwind CSS threat dashboard at sub-second latency."
+        },
+        {
+            "title": "AI Student Productivity & Behavioral Analytics Dashboard | Python, Scikitlearn, React.js, Next.js, PostgreSQL 2025",
+            "description": " Engineered a behavioral analytics engine processing time-series data — timetables, sleep patterns, mood logs — to predict student stress risk.  Applied clustering and time-series modeling to surface productivity insights and personalized recommendations via a Next.js frontend.  Built full-stack application with Python analytics backend, JWT authentication, and PostgreSQL persistence."
+        },
+        {
+            "title": "Geographic V elocity Anomaly Engine (Impossible T ravel Detector) | Python, Flask, IP Geolocation API, Risk Scoring 2025",
+            "description": " Designed an algorithmic risk-scoring engine detecting compromised credentials by computing geographic velocity between consecutive login events.  Integrated live IP Geolocation APIs to dynamically flag login sequences that violate physical travel constraints, triggering automated security alerts."
+        }
+    ],
+    "skills": [
+        "Anomaly Detection",
+        "Classification",
+        "Clustering",
+        "Express.Js",
+        "Git",
+        "Jwt",
+        "Linux",
+        "Machine Learning",
+        "Ml F Rameworks: Scikit-Learn",
+        "Mongodb",
+        "Next.Js",
+        "Node.Js",
+        "Numpy",
+        "Pandas",
+        "Python",
+        "React",
+        "React.Js",
+        "Regression",
+        "Scapy (Network Data Processing)",
+        "Tailwind Css",
+        "Time",
+        "Typescript",
+        "Vercel",
+        "Websockets"
+    ]
+}

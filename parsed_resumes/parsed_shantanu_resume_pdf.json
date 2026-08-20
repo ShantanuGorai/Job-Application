@@ -1,0 +1,112 @@
+{
+    "candidate_name": "Shantanu Gorai",
+    "contact_info": {
+        "email": "shantanugorai013@gmail.com",
+        "phone": "+91 70619 36584",
+        "linkedin": "linkedin.com/in/shantanu-gorai",
+        "github": "github.com/ShantanuGorai"
+    },
+    "education": [
+        "Bachelor of Engineering – Computer Science 2023 – 2027 | ACS College of Engineering, Bengaluru (VTU Affiliated) Bengaluru, Karnataka"
+    ],
+    "experience": {
+        "duration_mentions": [],
+        "roles_and_companies": [
+            "V ocational T rainee — Image Recognition using Machine LearningApr 2026 – May 2026",
+            "Tata Steel Ltd., Learning & Development Department Jamshedpur, Jharkhand",
+            "data preprocessing through model evaluation."
+        ]
+    },
+    "projects": [
+        {
+            "title": "Real Estate Listing & Property Search Platform|HTML5, CSS3, JavaScript, React.js, Node.js, Express.js, MongoDB2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Built a fully responsive property browsing and search platform with dynamic listing display, filter/search functionality, and an intuitive",
+            "description": "No description provided."
+        },
+        {
+            "title": "UI using React.js and Tailwind CSS.",
+            "description": "No description provided."
+        },
+        {
+            "title": "Designed a Node.js/Express.js REST API backend with MongoDB for property data management, supporting full CRUD operations",
+            "description": "and paginated query responses."
+        },
+        {
+            "title": "Applied componentdriven React architecture with clean state management, mobilefirst responsive design, and Gitbased version",
+            "description": "control throughout development."
+        },
+        {
+            "title": "V ocalLock — AI V oice Authentication & Spoof Detection System|Python, Flask, React.js, REST API, MySQL2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Designed and built a fullstack voice biometric authentication application with a React.js frontend, Flask REST API backend, and",
+            "description": "No description provided."
+        },
+        {
+            "title": "MySQLbacked user management system.",
+            "description": "No description provided."
+        },
+        {
+            "title": "Implemented secure JWTbased authentication workflow, user registration/login, and API integration between frontend and AIpowered",
+            "description": "spoof detection backend."
+        },
+        {
+            "title": "RunnerUp at CODE CARNAGE National Hackathon (Apr 2025)— delivered a complete working product in 24 hours.",
+            "description": "No description provided."
+        },
+        {
+            "title": "RealTime Network Intrusion Detection System|Python, Flask, React.js, JavaScript, Node.js, WebSockets2025",
+            "description": "No description provided."
+        },
+        {
+            "title": "Built a fullstack security monitoring application — Python/Flask backend for live network data processing and a React.js dashboard",
+            "description": "for real-time threat visualization."
+        },
+        {
+            "title": "Designed and integrated REST API endpoints connecting backend ML inference to a live frontend dashboard, with WebSocketbased",
+            "description": "streaming for real-time data updates."
+        },
+        {
+            "title": "AI Smart Attendance & Monitoring System|Python, JavaScript, React.js, Flask, PostgreSQL2024",
+            "description": "No description provided."
+        },
+        {
+            "title": "Developed a fullstack attendance management platform with a React.js teacher dashboard, Flask backend, and PostgreSQL database",
+            "description": "for student records and analytics."
+        },
+        {
+            "title": "Implemented user authentication, classwise entry/exit tracking, report generation, and a clean, responsive UI accessible across devices.",
+            "description": "No description provided."
+        }
+    ],
+    "skills": [
+        "Angular",
+        "Bootstrap",
+        "Classification",
+        "Docker",
+        "Express.Js",
+        "Git",
+        "Javascript",
+        "Jwt",
+        "Linux",
+        "Mongodb",
+        "Monitoring",
+        "Mysql",
+        "Node.Js",
+        "Postman",
+        "Python",
+        "React",
+        "React.Js",
+        "Responsive Design",
+        "Sql",
+        "Tailwind Css",
+        "Time",
+        "Typescript",
+        "Vercel",
+        "Websockets"
+    ]
+}
