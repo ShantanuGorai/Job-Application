@@ -734,15 +734,20 @@ router.get(
 
   passport.authenticate("google", {
 
+    // On failure, send the user back to the login app itself
+    // (bolt_login has no /login route — it's a single view with
+    // internal state — so we redirect to its root with a query
+    // param it can read to show an error).
     failureRedirect:
-      `${process.env.CLIENT_URL}/login?error=google_failed`,
+      `${process.env.LOGIN_APP_URL}/?error=google_failed`,
 
   }),
 
   (req, res) => {
 
+    // On success, send the user to the hero app, not back to login.
     res.redirect(
-      `${process.env.CLIENT_URL}/`
+      `${process.env.HERO_APP_URL}/`
     );
 
   }
@@ -772,14 +777,14 @@ router.get(
   passport.authenticate("github", {
 
     failureRedirect:
-      `${process.env.CLIENT_URL}/login?error=github_failed`,
+      `${process.env.LOGIN_APP_URL}/?error=github_failed`,
 
   }),
 
   (req, res) => {
 
     res.redirect(
-      `${process.env.CLIENT_URL}/`
+      `${process.env.HERO_APP_URL}/`
     );
 
   }

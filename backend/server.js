@@ -12,9 +12,20 @@ const app = express();
 
 connectDB();
 
+const allowedOrigins = [
+  process.env.LOGIN_APP_URL,
+  process.env.HERO_APP_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
