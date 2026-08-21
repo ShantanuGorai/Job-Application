@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   PartyPopper,
   Loader,
+  ShieldCheck,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -22,26 +23,23 @@ import {
   AuthModal,
 } from "@/components/ui/auth-shared";
 
-
-// =====================================================
-// SIGNUP MODAL STEPS
-// =====================================================
+const API_URL = "http://localhost:5000";
 
 const signUpModalSteps = [
   {
-    message: "Signing you up...",
+    message: "Creating your account...",
     icon: (
       <Loader className="w-12 h-12 text-primary animate-spin" />
     ),
   },
   {
-    message: "Onboarding you...",
+    message: "Saving your details...",
     icon: (
       <Loader className="w-12 h-12 text-primary animate-spin" />
     ),
   },
   {
-    message: "Finalizing...",
+    message: "Almost there...",
     icon: (
       <Loader className="w-12 h-12 text-primary animate-spin" />
     ),
@@ -54,21 +52,14 @@ const signUpModalSteps = [
   },
 ];
 
-
-// =====================================================
-// PROPS
-// =====================================================
+const TEXT_LOOP_INTERVAL = 1.5;
+const OTP_LENGTH = 4;
 
 interface SignUpComponentProps {
   logo?: React.ReactNode;
   brandName?: string;
   onSwitchToLogin?: () => void;
 }
-
-
-// =====================================================
-// SIGNUP COMPONENT
-// =====================================================
 
 export const AuthComponent = ({
   logo = <DefaultLogo />,
@@ -78,14 +69,17 @@ export const AuthComponent = ({
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
   const [authStep, setAuthStep] = useState<
-    "email" | "password" | "confirmPassword"
+    "email" | "password" | "confirmPassword" | "otp"
   >("email");
 
   const [modalStatus, setModalStatus] = useState<
@@ -95,6 +89,14 @@ export const AuthComponent = ({
   const [modalErrorMessage, setModalErrorMessage] =
     useState("");
 
+  const [otpDigits, setOtpDigits] = useState<
+    string[]
+  >(Array(OTP_LENGTH).fill(""));
+
+  const [resendStatus, setResendStatus] = useState<
+    "idle" | "sending" | "sent"
+  >("idle");
+
   const confettiRef = useRef<ConfettiRef>(null);
 
   const passwordInputRef =
@@ -103,10 +105,9 @@ export const AuthComponent = ({
   const confirmPasswordInputRef =
     useRef<HTMLInputElement>(null);
 
-
-  // =====================================================
-  // VALIDATION
-  // =====================================================
+  const otpRefs = useRef<
+    (HTMLInputElement | null)[]
+  >([]);
 
   const isEmailValid =
     /\S+@\S+\.\S+/.test(email);
@@ -117,6 +118,8 @@ export const AuthComponent = ({
   const isConfirmPasswordValid =
     confirmPassword.length >= 6;
 
+  const isOtpComplete =
+    otpDigits.every((d) => d !== "");
 
   // =====================================================
   // CONFETTI
@@ -151,12 +154,71 @@ export const AuthComponent = ({
     }
   };
 
+  // =====================================================
+  // GOOGLE SIGNUP
+  // =====================================================
+
+  const handleGoogleSignup = () => {
+    window.location.href =
+      `${API_URL}/auth/google`;
+  };
 
   // =====================================================
-  // EMAIL SIGNUP
+  // GITHUB SIGNUP
   // =====================================================
 
-  const handleFinalSubmit = async (
+  const handleGitHubSignup = () => {
+    window.location.href =
+      `${API_URL}/auth/github`;
+  };
+
+  // =====================================================
+  // EMAIL → PASSWORD → CONFIRM
+  // =====================================================
+
+  const handleProgressStep = () => {
+
+    if (
+      authStep === "email" &&
+      isEmailValid
+    ) {
+      setAuthStep("password");
+      return;
+    }
+
+    if (
+      authStep === "password" &&
+      isPasswordValid
+    ) {
+      setAuthStep("confirmPassword");
+    }
+  };
+
+  // =====================================================
+  // ENTER KEY
+  // =====================================================
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleProgressStep();
+    }
+  };
+
+  // =====================================================
+  // CONFIRM PASSWORD → TRIGGERS REAL SIGNUP + OTP EMAIL
+  // =====================================================
+  //
+  // This is the step that should actually call the backend.
+  // The backend's /auth/signup route hashes the password,
+  // creates (or updates) the unverified user, generates a
+  // real OTP, and emails it. Only once that succeeds do we
+  // move the user to the OTP screen.
+  // =====================================================
+
+  const handleConfirmPasswordSubmit = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
@@ -168,45 +230,39 @@ export const AuthComponent = ({
       return;
     }
 
+    if (!isConfirmPasswordValid) {
+      setModalErrorMessage(
+        "Please enter your confirm password."
+      );
 
-    // Password mismatch
+      setModalStatus("error");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setModalErrorMessage(
         "Passwords do not match!"
       );
 
       setModalStatus("error");
-
       return;
     }
-
-
-    // Password length
-    if (password.length < 6) {
-      setModalErrorMessage(
-        "Password must be at least 6 characters long."
-      );
-
-      setModalStatus("error");
-
-      return;
-    }
-
 
     try {
-      setModalStatus("loading");
 
+      setModalStatus("loading");
+      setModalErrorMessage("");
 
       const response = await fetch(
-        "http://localhost:5000/auth/signup",
+        `${API_URL}/auth/signup`,
         {
           method: "POST",
+
+          credentials: "include",
 
           headers: {
             "Content-Type": "application/json",
           },
-
-          credentials: "include",
 
           body: JSON.stringify({
             email,
@@ -215,108 +271,320 @@ export const AuthComponent = ({
         }
       );
 
-
       const data = await response.json();
 
-
-      // Backend error
       if (!response.ok) {
-        setModalErrorMessage(
+        throw new Error(
           data.message ||
-            "Unable to create your account."
+            "Signup failed. Please try again."
         );
-
-        setModalStatus("error");
-
-        return;
       }
 
+      // Signup succeeded and a real OTP has been emailed.
+      // Close the modal and move to the OTP step.
 
-      // Signup successful
-      setModalStatus("success");
+      setModalStatus("closed");
 
-      fireSideCanons();
+      setAuthStep("otp");
 
+      setOtpDigits(
+        Array(OTP_LENGTH).fill("")
+      );
 
-      // Redirect
+      setResendStatus("idle");
+
       setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1800);
+        otpRefs.current[0]?.focus();
+      }, 500);
 
     } catch (error) {
+
       console.error(
         "Signup error:",
         error
       );
 
       setModalErrorMessage(
-        "Unable to connect to the server. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Signup failed. Please try again."
       );
 
       setModalStatus("error");
     }
   };
 
-
   // =====================================================
-  // GOOGLE SIGNUP / LOGIN
-  // =====================================================
-
-  const handleGoogleSignup = () => {
-    window.location.href =
-      "http://localhost:5000/auth/google";
-  };
-
-
-  // =====================================================
-  // GITHUB SIGNUP / LOGIN
+  // OTP INPUT
   // =====================================================
 
-  const handleGitHubSignup = () => {
-    window.location.href =
-      "http://localhost:5000/auth/github";
-  };
+  const handleOtpChange = (
+    index: number,
+    value: string
+  ) => {
+    const digit = value
+      .replace(/[^0-9]/g, "")
+      .slice(-1);
 
+    const newOtp = [...otpDigits];
 
-  // =====================================================
-  // PROGRESS
-  // =====================================================
+    newOtp[index] = digit;
 
-  const handleProgressStep = () => {
+    setOtpDigits(newOtp);
 
-    if (authStep === "email") {
-
-      if (isEmailValid) {
-        setAuthStep("password");
-      }
-
-    } else if (authStep === "password") {
-
-      if (isPasswordValid) {
-        setAuthStep("confirmPassword");
-      }
-
+    if (
+      digit &&
+      index < OTP_LENGTH - 1
+    ) {
+      otpRefs.current[
+        index + 1
+      ]?.focus();
     }
   };
 
-
   // =====================================================
-  // ENTER KEY
+  // OTP KEYBOARD
   // =====================================================
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>
+  const handleOtpKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number
   ) => {
 
-    if (e.key === "Enter") {
+    if (
+      e.key === "Backspace" &&
+      !otpDigits[index] &&
+      index > 0
+    ) {
+      otpRefs.current[
+        index - 1
+      ]?.focus();
+    }
 
+    if (
+      e.key === "Enter" &&
+      isOtpComplete
+    ) {
       e.preventDefault();
-
-      handleProgressStep();
-
+      handleOtpSubmit();
     }
   };
 
+  // =====================================================
+  // OTP PASTE
+  // =====================================================
+
+  const handleOtpPaste = (
+    e: React.ClipboardEvent<HTMLInputElement>
+  ) => {
+    e.preventDefault();
+
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/[^0-9]/g, "")
+      .slice(0, OTP_LENGTH);
+
+    if (pasted.length > 0) {
+
+      const newOtp =
+        Array(OTP_LENGTH).fill("");
+
+      for (
+        let i = 0;
+        i < pasted.length;
+        i++
+      ) {
+        newOtp[i] = pasted[i];
+      }
+
+      setOtpDigits(newOtp);
+
+      const focusIndex = Math.min(
+        pasted.length,
+        OTP_LENGTH - 1
+      );
+
+      otpRefs.current[
+        focusIndex
+      ]?.focus();
+    }
+  };
+
+  // =====================================================
+  // VERIFY OTP API
+  // =====================================================
+  //
+  // Actually verifies the digits the user typed against the
+  // backend's /auth/verify-otp route, instead of just
+  // re-calling /auth/signup and treating any 200 as success.
+  // =====================================================
+
+  const handleOtpSubmit = async () => {
+
+    if (
+      modalStatus !== "closed" ||
+      authStep !== "otp"
+    ) {
+      return;
+    }
+
+    if (!isOtpComplete) {
+      setModalErrorMessage(
+        "Please enter all 4 digits."
+      );
+
+      setModalStatus("error");
+      return;
+    }
+
+    const otp = otpDigits.join("");
+
+    try {
+
+      setModalStatus("loading");
+      setModalErrorMessage("");
+
+      const response = await fetch(
+        `${API_URL}/auth/verify-otp`,
+        {
+          method: "POST",
+
+          credentials: "include",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            email,
+            otp,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Invalid verification code. Please try again."
+        );
+      }
+
+      // Verification succeeded — keep existing animation
+
+      setTimeout(() => {
+
+        fireSideCanons();
+
+        setModalStatus("success");
+
+        // Redirect to Hero page
+        setTimeout(() => {
+          window.location.href =
+            "http://localhost:5173/";
+        }, 1200);
+
+      }, TEXT_LOOP_INTERVAL * 1000);
+
+    } catch (error) {
+
+      console.error(
+        "OTP verification error:",
+        error
+      );
+
+      setModalErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Verification failed. Please try again."
+      );
+
+      setModalStatus("error");
+
+      // Clear the wrong OTP so the user can retype
+      setOtpDigits(
+        Array(OTP_LENGTH).fill("")
+      );
+
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 300);
+    }
+  };
+
+  // =====================================================
+  // RESEND OTP
+  // =====================================================
+
+  const handleResendOtp = async () => {
+
+    if (resendStatus === "sending") {
+      return;
+    }
+
+    try {
+
+      setResendStatus("sending");
+      setModalErrorMessage("");
+
+      const response = await fetch(
+        `${API_URL}/auth/resend-otp`,
+        {
+          method: "POST",
+
+          credentials: "include",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Could not resend verification code."
+        );
+      }
+
+      setOtpDigits(
+        Array(OTP_LENGTH).fill("")
+      );
+
+      setResendStatus("sent");
+
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 300);
+
+      // Reset the "sent" label back to idle after a bit
+      setTimeout(() => {
+        setResendStatus("idle");
+      }, 5000);
+
+    } catch (error) {
+
+      console.error(
+        "Resend OTP error:",
+        error
+      );
+
+      setModalErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not resend verification code."
+      );
+
+      setModalStatus("error");
+
+      setResendStatus("idle");
+    }
+  };
 
   // =====================================================
   // GO BACK
@@ -324,32 +592,38 @@ export const AuthComponent = ({
 
   const handleGoBack = () => {
 
-    if (authStep === "confirmPassword") {
+    if (authStep === "otp") {
+
+      setAuthStep("confirmPassword");
+
+      setOtpDigits(
+        Array(OTP_LENGTH).fill("")
+      );
+
+    } else if (
+      authStep === "confirmPassword"
+    ) {
 
       setAuthStep("password");
 
       setConfirmPassword("");
 
-    } else if (authStep === "password") {
+    } else if (
+      authStep === "password"
+    ) {
 
       setAuthStep("email");
-
     }
   };
-
 
   // =====================================================
   // CLOSE MODAL
   // =====================================================
 
   const closeModal = () => {
-
     setModalStatus("closed");
-
     setModalErrorMessage("");
-
   };
-
 
   // =====================================================
   // AUTO FOCUS
@@ -371,13 +645,19 @@ export const AuthComponent = ({
         confirmPasswordInputRef.current?.focus();
       }, 500);
 
+    } else if (
+      authStep === "otp"
+    ) {
+
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 500);
     }
 
   }, [authStep]);
 
-
   // =====================================================
-  // SUCCESS CONFETTI
+  // CONFETTI
   // =====================================================
 
   useEffect(() => {
@@ -388,23 +668,17 @@ export const AuthComponent = ({
 
   }, [modalStatus]);
 
-
   // =====================================================
   // UI
   // =====================================================
 
   return (
     <>
-      {/* Confetti */}
-
       <Confetti
         ref={confettiRef}
         manualstart
         className="fixed top-0 left-0 w-full h-full pointer-events-none z-[999]"
       />
-
-
-      {/* Authentication Modal */}
 
       <AuthModal
         modalStatus={modalStatus}
@@ -421,21 +695,16 @@ export const AuthComponent = ({
             }
 
             <p className="text-lg font-medium text-foreground">
-
               {
                 signUpModalSteps[
                   signUpModalSteps.length - 1
                 ].message
               }
-
             </p>
 
           </div>
         }
       />
-
-
-      {/* Main Auth Shell */}
 
       <AuthShell
         brandName={brandName}
@@ -445,10 +714,9 @@ export const AuthComponent = ({
 
         <AnimatePresence mode="wait">
 
-
-          {/* =================================================
-              EMAIL STEP
-          ================================================= */}
+          {/* =====================================================
+              EMAIL
+          ===================================================== */}
 
           {authStep === "email" && (
 
@@ -476,7 +744,6 @@ export const AuthComponent = ({
                 delay={0.25 * 1}
                 className="w-full"
               >
-
                 <div className="text-center">
 
                   <p className="font-serif font-light text-4xl sm:text-5xl md:text-6xl tracking-tight text-foreground whitespace-nowrap">
@@ -484,26 +751,19 @@ export const AuthComponent = ({
                   </p>
 
                 </div>
-
               </BlurFade>
 
-
               <BlurFade delay={0.25 * 2}>
-
                 <p className="text-sm font-medium text-muted-foreground">
                   Continue with
                 </p>
-
               </BlurFade>
 
-
-              {/* Google + GitHub */}
+              {/* SOCIAL */}
 
               <BlurFade delay={0.25 * 3}>
 
                 <div className="flex items-center justify-center gap-4 w-full">
-
-                  {/* Google */}
 
                   <GlassButton
                     type="button"
@@ -519,9 +779,6 @@ export const AuthComponent = ({
                     </span>
 
                   </GlassButton>
-
-
-                  {/* GitHub */}
 
                   <GlassButton
                     type="button"
@@ -541,9 +798,6 @@ export const AuthComponent = ({
                 </div>
 
               </BlurFade>
-
-
-              {/* OR */}
 
               <BlurFade
                 delay={0.25 * 4}
@@ -565,13 +819,11 @@ export const AuthComponent = ({
               </BlurFade>
 
             </motion.div>
-
           )}
 
-
-          {/* =================================================
-              PASSWORD TITLE
-          ================================================= */}
+          {/* =====================================================
+              PASSWORD
+          ===================================================== */}
 
           {authStep === "password" && (
 
@@ -610,7 +862,6 @@ export const AuthComponent = ({
 
               </BlurFade>
 
-
               <BlurFade delay={0.25 * 1}>
 
                 <p className="text-sm font-medium text-muted-foreground">
@@ -620,13 +871,11 @@ export const AuthComponent = ({
               </BlurFade>
 
             </motion.div>
-
           )}
 
-
-          {/* =================================================
-              CONFIRM PASSWORD TITLE
-          ================================================= */}
+          {/* =====================================================
+              CONFIRM PASSWORD
+          ===================================================== */}
 
           {authStep === "confirmPassword" && (
 
@@ -665,7 +914,6 @@ export const AuthComponent = ({
 
               </BlurFade>
 
-
               <BlurFade delay={0.25 * 1}>
 
                 <p className="text-sm font-medium text-muted-foreground">
@@ -675,18 +923,78 @@ export const AuthComponent = ({
               </BlurFade>
 
             </motion.div>
+          )}
 
+          {/* =====================================================
+              OTP UI
+          ===================================================== */}
+
+          {authStep === "otp" && (
+
+            <motion.div
+              key="otp-title"
+              initial={{
+                y: 6,
+                opacity: 0,
+              }}
+              animate={{
+                y: 0,
+                opacity: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
+              transition={{
+                duration: 0.3,
+                ease: "easeOut",
+              }}
+              className="w-full flex flex-col items-center text-center gap-4"
+            >
+
+              <BlurFade
+                delay={0}
+                className="w-full"
+              >
+
+                <div className="text-center flex flex-col items-center gap-3">
+
+                  <div className="bg-primary/10 text-primary rounded-full p-3">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+
+                  <p className="font-serif font-light text-4xl sm:text-5xl tracking-tight text-foreground whitespace-nowrap">
+                    Verify Your Email
+                  </p>
+
+                </div>
+
+              </BlurFade>
+
+              <BlurFade delay={0.25 * 1}>
+
+                <p className="text-sm font-medium text-muted-foreground max-w-[280px]">
+
+                  Enter the 4-digit code to continue with{" "}
+
+                  <span className="font-semibold text-foreground">
+                    {email}
+                  </span>
+
+                </p>
+
+              </BlurFade>
+
+            </motion.div>
           )}
 
         </AnimatePresence>
 
-
-        {/* =================================================
-            SIGNUP FORM
-        ================================================= */}
+        {/* =====================================================
+            FORM
+        ===================================================== */}
 
         <form
-          onSubmit={handleFinalSubmit}
+          onSubmit={handleConfirmPasswordSubmit}
           className="w-[300px] space-y-6"
         >
 
@@ -694,267 +1002,122 @@ export const AuthComponent = ({
 
           <AnimatePresence>
 
-            {authStep !== "confirmPassword" && (
+            {authStep !== "confirmPassword" &&
+              authStep !== "otp" && (
 
-              <motion.div
-                key="email-password-fields"
-                exit={{
-                  opacity: 0,
-                  filter: "blur(4px)",
-                }}
-                transition={{
-                  duration: 0.3,
-                  ease: "easeOut",
-                }}
-                className="w-full space-y-6"
-              >
-
-
-                {/* EMAIL */}
-
-                <BlurFade
-                  delay={
-                    authStep === "email"
-                      ? 0.25 * 5
-                      : 0
-                  }
-                  inView={true}
-                  className="w-full"
+                <motion.div
+                  key="email-password-fields"
+                  exit={{
+                    opacity: 0,
+                    filter: "blur(4px)",
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    ease: "easeOut",
+                  }}
+                  className="w-full space-y-6"
                 >
 
-                  <div className="relative w-full">
+                  {/* EMAIL */}
 
-                    <AnimatePresence>
+                  <BlurFade
+                    delay={
+                      authStep === "email"
+                        ? 0.25 * 5
+                        : 0
+                    }
+                    inView={true}
+                    className="w-full"
+                  >
 
-                      {authStep === "password" && (
+                    <div className="relative w-full">
 
-                        <motion.div
-                          initial={{
-                            y: -10,
-                            opacity: 0,
-                          }}
-                          animate={{
-                            y: 0,
-                            opacity: 1,
-                          }}
-                          transition={{
-                            duration: 0.3,
-                            delay: 0.4,
-                          }}
-                          className="absolute -top-6 left-4 z-10"
-                        >
+                      <AnimatePresence>
 
-                          <label className="text-xs text-muted-foreground font-semibold">
-                            Email
-                          </label>
+                        {authStep === "password" && (
 
-                        </motion.div>
-
-                      )}
-
-                    </AnimatePresence>
-
-
-                    <div className="glass-input-wrap w-full">
-
-                      <div className="glass-input">
-
-                        <span className="glass-input-text-area"></span>
-
-
-                        <div
-                          className={cn(
-                            "relative z-10 flex-shrink-0 flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out",
-
-                            email.length > 20 &&
-                            authStep === "email"
-                              ? "w-0 px-0"
-                              : "w-10 pl-2"
-                          )}
-                        >
-
-                          <Mail className="h-5 w-5 text-foreground/80 flex-shrink-0" />
-
-                        </div>
-
-
-                        <input
-                          type="email"
-                          placeholder="Email"
-                          value={email}
-                          onChange={(e) =>
-                            setEmail(e.target.value)
-                          }
-                          onKeyDown={handleKeyDown}
-                          className={cn(
-                            "relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none transition-[padding-right] duration-300 ease-in-out delay-300",
-
-                            isEmailValid &&
-                            authStep === "email"
-                              ? "pr-2"
-                              : "pr-0"
-                          )}
-                        />
-
-
-                        <div
-                          className={cn(
-                            "relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-
-                            isEmailValid &&
-                            authStep === "email"
-                              ? "w-10 pr-1"
-                              : "w-0"
-                          )}
-                        >
-
-                          <GlassButton
-                            type="button"
-                            onClick={handleProgressStep}
-                            size="icon"
-                            aria-label="Continue with email"
-                            contentClassName="text-foreground/80 hover:text-foreground"
+                          <motion.div
+                            initial={{
+                              y: -10,
+                              opacity: 0,
+                            }}
+                            animate={{
+                              y: 0,
+                              opacity: 1,
+                            }}
+                            transition={{
+                              duration: 0.3,
+                              delay: 0.4,
+                            }}
+                            className="absolute -top-6 left-4 z-10"
                           >
 
-                            <ArrowRight className="w-5 h-5" />
+                            <label className="text-xs text-muted-foreground font-semibold">
+                              Email
+                            </label>
 
-                          </GlassButton>
+                          </motion.div>
 
-                        </div>
+                        )}
 
-                      </div>
+                      </AnimatePresence>
 
-                    </div>
+                      <div className="glass-input-wrap w-full">
 
-                  </div>
+                        <div className="glass-input">
 
-                </BlurFade>
+                          <span className="glass-input-text-area"></span>
 
+                          <div
+                            className={cn(
+                              "relative z-10 flex-shrink-0 flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out",
+                              email.length > 20 &&
+                                authStep === "email"
+                                ? "w-0 px-0"
+                                : "w-10 pl-2"
+                            )}
+                          >
 
-                {/* PASSWORD */}
+                            <Mail className="h-5 w-5 text-foreground/80 flex-shrink-0" />
 
-                <AnimatePresence>
+                          </div>
 
-                  {authStep === "password" && (
+                          <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) =>
+                              setEmail(e.target.value)
+                            }
+                            onKeyDown={handleKeyDown}
+                            className={cn(
+                              "relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none transition-[padding-right] duration-300 ease-in-out delay-300",
+                              isEmailValid &&
+                                authStep === "email"
+                                ? "pr-2"
+                                : "pr-0"
+                            )}
+                          />
 
-                    <BlurFade
-                      key="password-field"
-                      className="w-full"
-                    >
+                          <div
+                            className={cn(
+                              "relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
+                              isEmailValid &&
+                                authStep === "email"
+                                ? "w-10 pr-1"
+                                : "w-0"
+                            )}
+                          >
 
-                      <div className="relative w-full">
-
-                        <AnimatePresence>
-
-                          {password.length > 0 && (
-
-                            <motion.div
-                              initial={{
-                                y: -10,
-                                opacity: 0,
-                              }}
-                              animate={{
-                                y: 0,
-                                opacity: 1,
-                              }}
-                              transition={{
-                                duration: 0.3,
-                              }}
-                              className="absolute -top-6 left-4 z-10"
+                            <GlassButton
+                              type="button"
+                              onClick={handleProgressStep}
+                              size="icon"
+                              aria-label="Continue with email"
+                              contentClassName="text-foreground/80 hover:text-foreground"
                             >
-
-                              <label className="text-xs text-muted-foreground font-semibold">
-                                Password
-                              </label>
-
-                            </motion.div>
-
-                          )}
-
-                        </AnimatePresence>
-
-
-                        <div className="glass-input-wrap w-full">
-
-                          <div className="glass-input">
-
-                            <span className="glass-input-text-area"></span>
-
-
-                            <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-10 pl-2">
-
-                              {isPasswordValid ? (
-
-                                <button
-                                  type="button"
-                                  aria-label="Toggle password visibility"
-                                  onClick={() =>
-                                    setShowPassword(
-                                      !showPassword
-                                    )
-                                  }
-                                  className="text-foreground/80 hover:text-foreground transition-colors p-2 rounded-full"
-                                >
-
-                                  {showPassword ? (
-                                    <EyeOff />
-                                  ) : (
-                                    <EyeOn />
-                                  )}
-
-                                </button>
-
-                              ) : (
-
-                                <Lock className="h-5 w-5 text-foreground/80 flex-shrink-0" />
-
-                              )}
-
-                            </div>
-
-
-                            <input
-                              ref={passwordInputRef}
-                              type={
-                                showPassword
-                                  ? "text"
-                                  : "password"
-                              }
-                              placeholder="Password"
-                              value={password}
-                              onChange={(e) =>
-                                setPassword(
-                                  e.target.value
-                                )
-                              }
-                              onKeyDown={handleKeyDown}
-                              className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none"
-                            />
-
-
-                            <div
-                              className={cn(
-                                "relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-
-                                isPasswordValid
-                                  ? "w-10 pr-1"
-                                  : "w-0"
-                              )}
-                            >
-
-                              <GlassButton
-                                type="button"
-                                onClick={handleProgressStep}
-                                size="icon"
-                                aria-label="Submit password"
-                                contentClassName="text-foreground/80 hover:text-foreground"
-                              >
-
-                                <ArrowRight className="w-5 h-5" />
-
-                              </GlassButton>
-
-                            </div>
+                              <ArrowRight className="w-5 h-5" />
+                            </GlassButton>
 
                           </div>
 
@@ -962,42 +1125,165 @@ export const AuthComponent = ({
 
                       </div>
 
+                    </div>
+
+                  </BlurFade>
+
+                  {/* PASSWORD */}
+
+                  <AnimatePresence>
+
+                    {authStep === "password" && (
 
                       <BlurFade
-                        inView
-                        delay={0.2}
+                        key="password-field"
+                        className="w-full"
                       >
 
-                        <button
-                          type="button"
-                          onClick={handleGoBack}
-                          className="mt-4 flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                        <div className="relative w-full">
+
+                          <AnimatePresence>
+
+                            {password.length > 0 && (
+
+                              <motion.div
+                                initial={{
+                                  y: -10,
+                                  opacity: 0,
+                                }}
+                                animate={{
+                                  y: 0,
+                                  opacity: 1,
+                                }}
+                                transition={{
+                                  duration: 0.3,
+                                }}
+                                className="absolute -top-6 left-4 z-10"
+                              >
+
+                                <label className="text-xs text-muted-foreground font-semibold">
+                                  Password
+                                </label>
+
+                              </motion.div>
+
+                            )}
+
+                          </AnimatePresence>
+
+                          <div className="glass-input-wrap w-full">
+
+                            <div className="glass-input">
+
+                              <span className="glass-input-text-area"></span>
+
+                              <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-10 pl-2">
+
+                                {isPasswordValid ? (
+
+                                  <button
+                                    type="button"
+                                    aria-label="Toggle password visibility"
+                                    onClick={() =>
+                                      setShowPassword(
+                                        !showPassword
+                                      )
+                                    }
+                                    className="text-foreground/80 hover:text-foreground transition-colors p-2 rounded-full"
+                                  >
+
+                                    {showPassword ? (
+                                      <EyeOff />
+                                    ) : (
+                                      <EyeOn />
+                                    )}
+
+                                  </button>
+
+                                ) : (
+
+                                  <Lock className="h-5 w-5 text-foreground/80 flex-shrink-0" />
+
+                                )}
+
+                              </div>
+
+                              <input
+                                ref={passwordInputRef}
+                                type={
+                                  showPassword
+                                    ? "text"
+                                    : "password"
+                                }
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) =>
+                                  setPassword(
+                                    e.target.value
+                                  )
+                                }
+                                onKeyDown={handleKeyDown}
+                                className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none"
+                              />
+
+                              <div
+                                className={cn(
+                                  "relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
+                                  isPasswordValid
+                                    ? "w-10 pr-1"
+                                    : "w-0"
+                                )}
+                              >
+
+                                <GlassButton
+                                  type="button"
+                                  onClick={handleProgressStep}
+                                  size="icon"
+                                  aria-label="Continue"
+                                  contentClassName="text-foreground/80 hover:text-foreground"
+                                >
+                                  <ArrowRight className="w-5 h-5" />
+                                </GlassButton>
+
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                        <BlurFade
+                          inView
+                          delay={0.2}
                         >
 
-                          <ArrowLeft className="w-4 h-4" />
+                          <button
+                            type="button"
+                            onClick={handleGoBack}
+                            className="mt-4 flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                          >
 
-                          Go back
+                            <ArrowLeft className="w-4 h-4" />
 
-                        </button>
+                            Go back
+
+                          </button>
+
+                        </BlurFade>
 
                       </BlurFade>
 
-                    </BlurFade>
+                    )}
 
-                  )}
+                  </AnimatePresence>
 
-                </AnimatePresence>
-
-              </motion.div>
-
-            )}
+                </motion.div>
+              )}
 
           </AnimatePresence>
 
-
-          {/* =================================================
-              CONFIRM PASSWORD
-          ================================================= */}
+          {/* CONFIRM PASSWORD */}
 
           <AnimatePresence>
 
@@ -1039,13 +1325,11 @@ export const AuthComponent = ({
 
                   </AnimatePresence>
 
-
                   <div className="glass-input-wrap w-[300px]">
 
                     <div className="glass-input">
 
                       <span className="glass-input-text-area"></span>
-
 
                       <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-10 pl-2">
 
@@ -1078,7 +1362,6 @@ export const AuthComponent = ({
 
                       </div>
 
-
                       <input
                         ref={confirmPasswordInputRef}
                         type={
@@ -1096,11 +1379,9 @@ export const AuthComponent = ({
                         className="relative z-10 h-full w-0 flex-grow bg-transparent text-foreground placeholder:text-foreground/60 focus:outline-none"
                       />
 
-
                       <div
                         className={cn(
                           "relative z-10 flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-
                           isConfirmPasswordValid
                             ? "w-10 pr-1"
                             : "w-0"
@@ -1110,7 +1391,7 @@ export const AuthComponent = ({
                         <GlassButton
                           type="submit"
                           size="icon"
-                          aria-label="Finish sign-up"
+                          aria-label="Continue to verification"
                           contentClassName="text-foreground/80 hover:text-foreground"
                         >
 
@@ -1125,7 +1406,6 @@ export const AuthComponent = ({
                   </div>
 
                 </div>
-
 
                 <BlurFade
                   inView
@@ -1147,17 +1427,141 @@ export const AuthComponent = ({
                 </BlurFade>
 
               </BlurFade>
+            )}
 
+          </AnimatePresence>
+
+          {/* OTP */}
+
+          <AnimatePresence>
+
+            {authStep === "otp" && (
+
+              <BlurFade
+                key="otp-fields"
+                className="w-full"
+              >
+
+                <div className="flex items-center justify-center gap-3 w-[300px]">
+
+                  {otpDigits.map((digit, i) => (
+
+                    <div
+                      key={i}
+                      className="glass-input-wrap flex-1"
+                      style={{
+                        maxWidth: "56px",
+                      }}
+                    >
+
+                      <div
+                        className="glass-input"
+                        style={{
+                          justifyContent: "center",
+                          padding: "0.25rem 0",
+                        }}
+                      >
+
+                        <span className="glass-input-text-area"></span>
+
+                        <input
+                          ref={(el) => {
+                            otpRefs.current[i] = el;
+                          }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) =>
+                            handleOtpChange(
+                              i,
+                              e.target.value
+                            )
+                          }
+                          onKeyDown={(e) =>
+                            handleOtpKeyDown(
+                              e,
+                              i
+                            )
+                          }
+                          onPaste={handleOtpPaste}
+                          aria-label={`OTP digit ${
+                            i + 1
+                          }`}
+                          className="relative z-10 h-12 w-full bg-transparent text-center text-2xl font-semibold text-foreground focus:outline-none"
+                        />
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+                <div className="flex flex-col items-center gap-4 mt-6">
+
+                  <div
+                    className={cn(
+                      "transition-all duration-300 overflow-hidden",
+                      isOtpComplete
+                        ? "opacity-100"
+                        : "opacity-0 pointer-events-none"
+                    )}
+                  >
+
+                    <GlassButton
+                      type="button"
+                      onClick={handleOtpSubmit}
+                      size="sm"
+                      contentClassName="flex items-center gap-2"
+                    >
+
+                      <ShieldCheck className="w-4 h-4" />
+
+                      <span className="font-semibold text-foreground">
+                        Verify & Create Account
+                      </span>
+
+                    </GlassButton>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGoBack}
+                    className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                  >
+
+                    <ArrowLeft className="w-4 h-4" />
+
+                    Go back
+
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendStatus === "sending"}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                  >
+                    {resendStatus === "sending"
+                      ? "Sending..."
+                      : resendStatus === "sent"
+                      ? "Code sent!"
+                      : "Didn't receive a code? Resend"}
+                  </button>
+
+                </div>
+
+              </BlurFade>
             )}
 
           </AnimatePresence>
 
         </form>
 
-
-        {/* =================================================
-            LOGIN LINK
-        ================================================= */}
+        {/* SWITCH LOGIN */}
 
         <BlurFade
           delay={0.25 * 6}
@@ -1173,9 +1577,7 @@ export const AuthComponent = ({
               onClick={onSwitchToLogin}
               className="font-semibold text-foreground hover:underline transition-colors"
             >
-
               Log in
-
             </button>
 
           </p>
@@ -1183,14 +1585,13 @@ export const AuthComponent = ({
         </BlurFade>
 
       </AuthShell>
-
     </>
   );
 };
 
 
 // =====================================================
-// PASSWORD VISIBLE ICON
+// ICONS
 // =====================================================
 
 function EyeOn() {
@@ -1207,23 +1608,11 @@ function EyeOn() {
       strokeLinejoin="round"
       className="w-5 h-5"
     >
-
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-
-      <circle
-        cx="12"
-        cy="12"
-        r="3"
-      />
-
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }
-
-
-// =====================================================
-// PASSWORD HIDDEN ICON
-// =====================================================
 
 function EyeOff() {
   return (
@@ -1239,20 +1628,15 @@ function EyeOff() {
       strokeLinejoin="round"
       className="w-5 h-5"
     >
-
       <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-
       <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-
       <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-
       <line
         x1="2"
         x2="22"
         y1="2"
         y2="22"
       />
-
     </svg>
   );
 }
