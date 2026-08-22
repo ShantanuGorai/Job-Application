@@ -12,20 +12,11 @@ const app = express();
 
 connectDB();
 
-const allowedOrigins = [
-  process.env.LOGIN_APP_URL,
-  process.env.HERO_APP_URL,
-].filter(Boolean);
-
+// Now that login/hero/main all live in one merged frontend app,
+// there's only one origin that ever calls this API.
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );
