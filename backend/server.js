@@ -7,6 +7,8 @@ const passport = require("./passport/passport");
 
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/auth");
+const websiteRequestRoutes = require("./routes/websiteRequest");
+const careerProfileRoutes = require("./routes/careerProfile");
 
 const app = express();
 
@@ -40,6 +42,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/auth", authRoutes);
+app.use("/api/website-requests", websiteRequestRoutes);
+app.use("/api/career-profiles", careerProfileRoutes);
 
 app.get("/", (req, res) => {
   res.json({

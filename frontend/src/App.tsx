@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AuthComponent } from "@/components/ui/sign-up";
 import { LoginComponent } from "@/components/ui/login";
 import HeroSection from "@/components/ui/glassmorphism-trust-hero";
+import BentoGrid01 from "@/components/ui/bento-grid-01";
+import CareerOnboardingForm from "@/components/ui/career-onboarding-form";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // =====================================================
@@ -49,6 +51,14 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
+
+      {/* Public — reachable directly at 5173/features or via the
+          "Explore Features" button on the hero page, no login needed. */}
+      <Route path="/features" element={<BentoGrid01 />} />
+
+      {/* Public — reachable directly at 5173/get-started or via the
+          "Get Started" button on the hero page, no login needed. */}
+      <Route path="/get-started" element={<CareerOnboardingForm />} />
 
       {/* Protected: only reachable with a valid session.
           ProtectedRoute checks GET /auth/me and bounces

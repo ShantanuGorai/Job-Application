@@ -14,13 +14,11 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Word file support (.docx)
 try:
     import docx
 except ImportError:
     docx = None
 
-# Initialize NLP & Sentence Embedding Models
 print("[*] Initializing Local NLP & Machine Learning Embedding Models...")
 nlp = spacy.load("en_core_web_sm")
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
