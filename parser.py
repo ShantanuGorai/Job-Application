@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import json
 import urllib.parse
 from pathlib import Path
@@ -19,7 +20,18 @@ try:
 except ImportError:
     docx = None
 
-print("[*] Initializing Local NLP & Machine Learning Embedding Models...")
+# Keep stdout reserved for the single JSON line that --api mode prints
+# at the end (see run_api_mode below) — everything else, including
+# this startup message, goes to stderr instead. Also force stdout/
+# stderr to UTF-8 so any unicode characters (like the ✓ used in
+# interactive mode further down) never crash on Windows' default
+# console codepage (cp1252) when this process's output is piped
+# rather than shown in a real terminal — which is exactly what
+# happens when Node spawns this script.
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
+
+print("[*] Initializing Local NLP & Machine Learning Embedding Models...", file=sys.stderr)
 nlp = spacy.load("en_core_web_sm")
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -55,7 +67,7 @@ def save_new_skills(new_skills):
     with open(SKILLS_FILE, "a", encoding="utf-8") as f:
         for skill in new_skills:
             f.write(f"{skill.lower()}\n")
-    print(f"[+] Auto-Saved {len(new_skills)} new skill(s) to storage: {list(new_skills)}")
+    print(f"[+] Auto-Saved {len(new_skills)} new skill(s) to storage: {list(new_skills)}", file=sys.stderr)
 
 
 def select_resume_file():
@@ -364,7 +376,7 @@ def fetch_direct_linkedin_jobs(skill: str, exp_months: int, location: str = "Ind
                 if len(jobs) >= count:
                     break
     except Exception as e:
-        print(f"[!] Error fetching live LinkedIn data: {e}")
+        print(f"[!] Error fetching live LinkedIn data: {e}", file=sys.stderr)
 
     return jobs
 
@@ -404,7 +416,7 @@ def main():
     output_filename = OUTPUT_DIR / f"parsed_{Path(resume_path).stem}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(parsed_data, f, indent=4, ensure_ascii=False)
-    print(f"[✓] Resume parsed and saved to: {output_filename}")
+    print(f"[OK] Resume parsed and saved to: {output_filename}")
 
     predicted_role = predict_best_role_ml(extracted_skills, raw_text)
     print("\n" + "=" * 72)
@@ -468,5 +480,116 @@ def main():
             
     print("=" * 72)
 
+
+# =====================================================
+# NON-INTERACTIVE "--api" MODE
+# =====================================================
+# Invoked as: python parser.py --api <resume_path> --role <role>
+#             --experience-months <n> --location <location>
+#
+# No file dialog, no input() prompts — everything comes from
+# argv. Prints exactly ONE line of JSON to stdout (all other
+# output above goes to stderr) so a caller like Node's
+# child_process can just take the last stdout line and
+# JSON.parse it. On failure, prints {"error": "..."} instead
+# of raising, so the caller gets a clean message either way.
+
+def parse_resume_for_api(resume_path, role="", experience_months=0, location="India"):
+    raw_text = extract_text_from_file(resume_path)
+
+    if not raw_text.strip():
+        return {"error": "Could not extract readable text from this document."}
+
+    extracted_skills = extract_and_sync_skills(raw_text)
+    candidate_name = extract_name(raw_text)
+    predicted_role = predict_best_role_ml(extracted_skills, raw_text)
+
+    preferred_role = role.strip() if role and role.strip() else None
+
+    def build_matches(target_role):
+        live_jobs = fetch_direct_linkedin_jobs(target_role, experience_months, location, count=6)
+        portal_sections = generate_all_portal_apply_links(target_role, experience_months, location)
+
+        portal_links = []
+        for category, portals in portal_sections.items():
+            for portal_name, url in portals.items():
+                portal_links.append({
+                    "platform": portal_name,
+                    "category": category,
+                    "url": url,
+                })
+
+        return {"live_jobs": live_jobs, "portal_links": portal_links}
+
+    # Always compute matches for what the resume's own skills point to.
+    resume_matches = build_matches(predicted_role)
+
+    # Only compute a second, separate set of matches if the person
+    # typed a preferred role at onboarding AND it's actually different
+    # from what their resume already predicts — no point duplicating
+    # the same search twice under two different headings.
+    preferred_matches = None
+    if preferred_role and preferred_role.strip().lower() != predicted_role.strip().lower():
+        preferred_matches = build_matches(preferred_role)
+
+    return {
+        "candidate_name": candidate_name,
+        "skills": extracted_skills,
+        "predicted_role": predicted_role,
+        "preferred_role": preferred_role,
+        "experience_months": experience_months,
+        "location": location,
+        "resume_matches": resume_matches,
+        "preferred_matches": preferred_matches,
+    }
+
+
+def _get_flag_value(argv, flag_name, default=""):
+    if flag_name in argv:
+        idx = argv.index(flag_name)
+        if idx + 1 < len(argv):
+            return argv[idx + 1]
+    return default
+
+
+def run_api_mode(argv):
+    # argv is sys.argv, e.g.:
+    # ["parser.py", "--api", "<resume_path>", "--role", "...",
+    #  "--experience-months", "12", "--location", "India"]
+    resume_path = argv[2] if len(argv) > 2 else ""
+
+    role = _get_flag_value(argv, "--role", "")
+    location = _get_flag_value(argv, "--location", "India") or "India"
+
+    exp_raw = _get_flag_value(argv, "--experience-months", "0")
+    try:
+        experience_months = int(exp_raw)
+    except ValueError:
+        experience_months = 0
+
+    if not resume_path or not os.path.exists(resume_path):
+        print(json.dumps({"error": f"Resume file not found: {resume_path}"}, ensure_ascii=True))
+        return
+
+    try:
+        init_skill_storage()
+        result = parse_resume_for_api(
+            resume_path,
+            role=role,
+            experience_months=experience_months,
+            location=location,
+        )
+    except Exception as e:
+        result = {"error": f"{type(e).__name__}: {e}"}
+
+    # ensure_ascii=True escapes any non-ASCII characters as \uXXXX
+    # instead of raw bytes, so this print can never hit the same
+    # console-encoding crash the interactive ✓ print did above.
+    print(json.dumps(result, ensure_ascii=True))
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--api":
+        run_api_mode(sys.argv)
+    else:
+        main()

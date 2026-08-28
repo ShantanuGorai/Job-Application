@@ -9,6 +9,8 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/auth");
 const websiteRequestRoutes = require("./routes/websiteRequest");
 const careerProfileRoutes = require("./routes/careerProfile");
+const parseResumeRoutes = require("./routes/parseResume");
+const appliedJobsRoutes = require("./routes/appliedJobs");
 
 const app = express();
 
@@ -44,6 +46,8 @@ app.use(passport.session());
 app.use("/auth", authRoutes);
 app.use("/api/website-requests", websiteRequestRoutes);
 app.use("/api/career-profiles", careerProfileRoutes);
+app.use("/api/parse-resume", parseResumeRoutes);
+app.use("/api/applied-jobs", appliedJobsRoutes);
 
 app.get("/", (req, res) => {
   res.json({

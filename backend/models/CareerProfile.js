@@ -46,23 +46,12 @@ const careerProfileSchema = new mongoose.Schema(
     additionalInfo: { type: String, trim: true, default: "" },
 
     // =====================================================
-    // RESUME FILE
-    // =====================================================
-    // The uploaded file itself lives on disk (backend/uploads/resumes);
-    // this just records where to find it and its original name so the
-    // parser (or a future API wrapping parser.py) can locate it later.
-
-    resume: {
-      originalName: { type: String, required: true },
-      storedFilename: { type: String, required: true },
-      path: { type: String, required: true },
-      mimeType: { type: String, required: true },
-      sizeBytes: { type: Number, required: true },
-    },
-
-    // =====================================================
     // LINK TO A LOGGED-IN USER, IF ANY
     // =====================================================
+    // Note: no resume field here anymore — resume upload now
+    // happens once, on the dashboard, right before running
+    // the parser (see routes/parseResume.js), instead of
+    // being collected (and required) during onboarding too.
 
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -73,4 +62,7 @@ const careerProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("CareerProfile", careerProfileSchema);
+// Export the compiled MODEL, not the schema — mongoose.model(...)
+// is what gives you .find(), .findOne(), .create(), etc.
+module.exports =
+  mongoose.models.CareerProfile || mongoose.model("CareerProfile", careerProfileSchema);

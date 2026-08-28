@@ -6,6 +6,7 @@ import { LoginComponent } from "@/components/ui/login";
 import HeroSection from "@/components/ui/glassmorphism-trust-hero";
 import BentoGrid01 from "@/components/ui/bento-grid-01";
 import CareerOnboardingForm from "@/components/ui/career-onboarding-form";
+import Dashboard from "@/components/ui/dashboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // =====================================================
@@ -74,17 +75,13 @@ function App() {
         }
       />
 
-      {/* /main is a placeholder for your actual post-login
-          dashboard/app screen. For now it renders the same
-          hero content — swap in your real component here
-          once you build it. */}
+      {/* The main app hub: resume upload, job matches,
+          applied-jobs tracking, profile score. */}
       <Route
         path="/main"
         element={
           <ProtectedRoute>
-            <div className="w-full min-h-screen bg-zinc-950">
-              <HeroSection />
-            </div>
+            <Dashboard />
           </ProtectedRoute>
         }
       />

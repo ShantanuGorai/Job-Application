@@ -1,15 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  ChevronDown,
-  Upload,
-  FileText,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, ChevronDown } from "lucide-react";
 
 const API_URL = "http://localhost:5000";
 
@@ -23,7 +15,7 @@ const STEPS = [
   "Career Goals",
   "Experience",
   "Compensation",
-  "Resume & Preferences",
+  "Preferences",
 ] as const;
 
 type StepName = (typeof STEPS)[number];
@@ -257,51 +249,6 @@ function CheckboxOption({
   );
 }
 
-function ResumeUpload({
-  file,
-  onChange,
-}: {
-  file: File | null;
-  onChange: (f: File | null) => void;
-}) {
-  return (
-    <div>
-      {!file ? (
-        <label className="flex flex-col items-center justify-center gap-2 w-full rounded-lg border-2 border-dashed border-zinc-200 px-4 py-8 text-center cursor-pointer hover:border-zinc-300 transition-colors">
-          <Upload className="w-6 h-6 text-zinc-400" />
-          <span className="text-sm font-semibold text-zinc-700">
-            Click to upload your resume
-          </span>
-          <span className="text-xs text-zinc-400">PDF, DOC, or DOCX</span>
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-          />
-        </label>
-      ) : (
-        <div className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3.5">
-          <div className="flex items-center gap-3 min-w-0">
-            <FileText className="w-5 h-5 text-zinc-500 flex-shrink-0" />
-            <span className="text-sm font-semibold text-zinc-900 truncate">
-              {file.name}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="flex-shrink-0 text-zinc-400 hover:text-zinc-700 transition-colors"
-            aria-label="Remove resume"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function StepHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="mb-8">
@@ -409,10 +356,36 @@ function NavButtons({
 export default function CareerOnboardingForm() {
   const navigate = useNavigate();
 
+  // Before showing the form, check whether this person already
+  // completed onboarding — if so, skip straight to the dashboard
+  // instead of making them fill it out again every time.
+  const [checkingExisting, setCheckingExisting] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_URL}/api/career-profiles/me`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((result) => {
+        if (cancelled) return;
+        if (result.success && result.profile) {
+          navigate("/main", { replace: true });
+        } else {
+          setCheckingExisting(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCheckingExisting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [data, setData] = useState<FormData>(initialFormData);
-  const [resume, setResume] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -452,8 +425,8 @@ export default function CareerOnboardingForm() {
         return data.experienceLevel !== "";
       case "Compensation":
         return data.salaryRange !== "" && data.availability !== "";
-      case "Resume & Preferences":
-        return resume !== null;
+      case "Preferences":
+        return true;
     }
   };
 
@@ -468,35 +441,18 @@ export default function CareerOnboardingForm() {
       return;
     }
 
-    // Final step — build multipart form data since a resume file is attached
+    // Final step — plain JSON now, no file attached here anymore.
+    // Resume upload happens on the dashboard instead, right before
+    // running the parser — no reason to ask for it twice.
     try {
       setSubmitting(true);
       setSubmitError("");
 
-      const payload = new FormData();
-      payload.append("fullName", data.fullName);
-      payload.append("email", data.email);
-      payload.append("phone", data.phone);
-      payload.append("jobTitle", data.jobTitle);
-      payload.append("industry", data.industry);
-      payload.append("careerGoal", data.careerGoal);
-      payload.append("idealRole", data.idealRole);
-      payload.append("experienceLevel", data.experienceLevel);
-      payload.append("skills", data.skills);
-      payload.append("salaryRange", data.salaryRange);
-      payload.append("availability", data.availability);
-      payload.append("workPreferences", JSON.stringify(data.workPreferences));
-      payload.append("additionalInfo", data.additionalInfo);
-      if (resume) {
-        payload.append("resume", resume);
-      }
-
       const response = await fetch(`${API_URL}/api/career-profiles`, {
         method: "POST",
         credentials: "include",
-        // No Content-Type header — the browser sets the multipart
-        // boundary automatically for FormData bodies.
-        body: payload,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
       const result = await response.json();
@@ -506,6 +462,11 @@ export default function CareerOnboardingForm() {
       }
 
       setSubmitted(true);
+
+      // Brief confirmation, then straight into the dashboard.
+      setTimeout(() => {
+        navigate("/main");
+      }, 1600);
     } catch (error) {
       console.error("Career profile submission error:", error);
       setSubmitError(
@@ -521,6 +482,14 @@ export default function CareerOnboardingForm() {
     center: { x: 0, opacity: 1 },
     exit: (dir: 1 | -1) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
   };
+
+  if (checkingExisting) {
+    return (
+      <div className="min-h-screen w-full bg-white flex items-center justify-center">
+        <div className="text-zinc-400 text-sm">Loading...</div>
+      </div>
+    );
+  }
 
   if (submitted) {
     const firstName = data.fullName.trim().split(" ")[0] || "there";
@@ -540,14 +509,14 @@ export default function CareerOnboardingForm() {
             Hi {firstName}, your profile is in.
           </h2>
           <p className="text-zinc-500 mb-8">
-            We're matching your resume against open roles across every platform
-            we track — check back soon for a personalized shortlist.
+            Taking you to your dashboard, where you can upload your resume and
+            see matching jobs.
           </p>
           <button
-            onClick={() => navigate("/hero")}
+            onClick={() => navigate("/main")}
             className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
-            Back to home
+            Go now
           </button>
         </motion.div>
       </div>
@@ -733,11 +702,11 @@ export default function CareerOnboardingForm() {
                   </>
                 )}
 
-                {currentStep === "Resume & Preferences" && (
+                {currentStep === "Preferences" && (
                   <>
                     <StepHeader
-                      title="Resume & Work Preferences"
-                      subtitle="Last step — upload your resume so we can match you to roles"
+                      title="Work Preferences"
+                      subtitle="Last step — how do you like to work?"
                     />
                     <div className="space-y-6">
                       <div>
@@ -760,10 +729,6 @@ export default function CareerOnboardingForm() {
                           onChange={(v) => update("additionalInfo", v)}
                           placeholder="Any additional info about your career goals"
                         />
-                      </div>
-                      <div>
-                        <Label>Upload your resume</Label>
-                        <ResumeUpload file={resume} onChange={setResume} />
                       </div>
                     </div>
                   </>

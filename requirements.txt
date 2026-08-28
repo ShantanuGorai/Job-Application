@@ -1,0 +1,11 @@
+requests
+beautifulsoup4
+spacy
+pypdf
+python-docx
+numpy
+sentence-transformers
+scikit-learn
+
+# After installing these, also run once:
+#   python -m spacy download en_core_web_sm

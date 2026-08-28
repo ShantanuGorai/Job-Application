@@ -56,3 +56,4 @@ scapy (network data processing)
 ml f rameworks: scikit-learn
 numpy
 pandas
+databases & platforms:postgresql
