@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Upload,
   FileText,
@@ -11,6 +12,10 @@ import {
   ChevronDown,
   ExternalLink,
   LogOut,
+  MapPin,
+  Clock,
+  Settings,
+  User,
 } from "lucide-react";
 import CareerIllustration from "@/components/ui/career-illustration";
 import { detectPlatform } from "@/lib/platforms";
@@ -48,6 +53,8 @@ interface ParsedResumeData {
   preferred_role: string | null;
   experience_months: number;
   location: string;
+  resume_score: number;
+  resume_score_notes: string[];
   resume_matches: MatchSet;
   preferred_matches: MatchSet | null;
 }
@@ -70,7 +77,9 @@ interface JobEntry {
   id: string;
   title: string;
   subtitle: string;
-  location: string;
+  locationText: string;
+  postedText: string;
+  postedDaysAgo: number;
   url: string;
   linkType: "live" | "gateway";
   platformName: string;
@@ -85,6 +94,8 @@ const LOADING_MESSAGES = [
   "Searching job platforms...",
   "Almost there...",
 ];
+
+type SortMode = "default" | "newest";
 
 // =====================================================
 // TYPEWRITER HOOK
@@ -108,6 +119,36 @@ function useTypewriter(text: string, speed = 45) {
 }
 
 // =====================================================
+// PARSE A HUMAN "posted" STRING INTO A SORTABLE NUMBER
+// =====================================================
+// LinkedIn's scraped listings give text like "3 days ago",
+// "1 week ago", "Recently posted", etc. — not a clean
+// number. This turns that into an approximate day count so
+// the "sort by newest" filter has something to sort on.
+// Gateway/search-link entries have no real posting date, so
+// they get Infinity and always sort to the end.
+
+function parsePostedToDays(posted: string): number {
+  if (!posted) return Infinity;
+  const lower = posted.toLowerCase();
+
+  if (lower.includes("just now") || lower.includes("today") || lower.includes("recently")) {
+    return 0;
+  }
+
+  const numMatch = lower.match(/(\d+)/);
+  const num = numMatch ? parseInt(numMatch[1], 10) : 0;
+
+  if (lower.includes("hour") || lower.includes("minute")) return 0;
+  if (lower.includes("day")) return num;
+  if (lower.includes("week")) return num * 7;
+  if (lower.includes("month")) return num * 30;
+  if (lower.includes("year")) return num * 365;
+
+  return Infinity;
+}
+
+// =====================================================
 // TURN A MatchSet INTO DISPLAYABLE JobEntry[]
 // =====================================================
 
@@ -118,7 +159,9 @@ function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
       id: `live-${roleLabel}-${i}`,
       title: job.role,
       subtitle: job.company,
-      location: job.location ? `${job.location} · ${job.posted}` : job.posted,
+      locationText: job.location || "",
+      postedText: job.posted || "",
+      postedDaysAgo: parsePostedToDays(job.posted),
       url: job.apply_url,
       linkType: "live",
       platformName: platform.name,
@@ -133,7 +176,9 @@ function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
       id: `gateway-${roleLabel}-${i}`,
       title: link.platform,
       subtitle: `${link.category} · for "${roleLabel}"`,
-      location: "",
+      locationText: "",
+      postedText: "",
+      postedDaysAgo: Infinity,
       url: link.url,
       linkType: "gateway",
       platformName: platform.name,
@@ -143,6 +188,96 @@ function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
   });
 
   return [...liveEntries, ...gatewayEntries];
+}
+
+// =====================================================
+// SETTINGS DROPDOWN (nav) — Account / Log out
+// =====================================================
+
+function SettingsMenu({
+  onLogout,
+}: {
+  onLogout: () => void;
+}) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Settings"
+        aria-expanded={open}
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
+          open ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+        }`}
+      >
+        <motion.span
+          animate={{ rotate: open ? 90 : 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="flex"
+        >
+          <Settings className="w-5 h-5" />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -6 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            style={{ transformOrigin: "top right" }}
+            className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-zinc-100 shadow-lg shadow-zinc-200/60 overflow-hidden z-20"
+          >
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/account");
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors text-left"
+            >
+              <User className="w-4 h-4 text-zinc-400" />
+              Account
+            </button>
+            <div className="h-px bg-zinc-100" />
+            <button
+              onClick={() => {
+                setOpen(false);
+                onLogout();
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
+            >
+              <LogOut className="w-4 h-4" />
+              Log out
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 // =====================================================
@@ -213,7 +348,22 @@ function JobCard({
         </div>
       </div>
 
-      {entry.location && <p className="text-xs text-zinc-400 mb-4">{entry.location}</p>}
+      {(entry.locationText || entry.postedText) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
+          {entry.locationText && (
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
+              <MapPin className="w-3.5 h-3.5" />
+              {entry.locationText}
+            </span>
+          )}
+          {entry.postedText && (
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
+              <Clock className="w-3.5 h-3.5" />
+              {entry.postedText}
+            </span>
+          )}
+        </div>
+      )}
 
       <button
         onClick={() => onApply(entry)}
@@ -252,7 +402,8 @@ function JobSection({
         {subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Max 2 cards per row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {entries.map((entry, i) => (
           <JobCard key={entry.id} entry={entry} index={i} onApply={onApply} />
         ))}
@@ -276,17 +427,22 @@ export default function Dashboard() {
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const [parseError, setParseError] = useState("");
   const [parsedData, setParsedData] = useState<ParsedResumeData | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(true);
 
   const [appliedJobs, setAppliedJobs] = useState<AppliedJobRecord[]>([]);
   const [platformFilter, setPlatformFilter] = useState("All Platforms");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
 
   const firstName = profile?.fullName?.trim().split(" ")[0] || "there";
   const headline = `Hi ${firstName}, let's find your role.`;
   const typedHeadline = useTypewriter(headline);
 
   // -----------------------------------------------------
-  // LOAD PROFILE + APPLIED JOBS ON MOUNT
+  // LOAD PROFILE + APPLIED JOBS + SAVED RESUME ON MOUNT
   // -----------------------------------------------------
+  // This is what makes a refresh (or logging back in later)
+  // NOT lose everything — the last successful parse is saved
+  // server-side and re-fetched here instead of starting blank.
 
   useEffect(() => {
     fetch(`${API_URL}/api/career-profiles/me`, { credentials: "include" })
@@ -302,6 +458,14 @@ export default function Dashboard() {
         if (data.success) setAppliedJobs(data.jobs);
       })
       .catch(() => {});
+
+    fetch(`${API_URL}/api/parse-resume/latest`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data) setParsedData(data.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingSaved(false));
   }, []);
 
   // -----------------------------------------------------
@@ -380,15 +544,26 @@ export default function Dashboard() {
     return ["All Platforms", ...names];
   }, [resumeEntries, preferredEntries]);
 
-  const filteredResumeEntries = useMemo(() => {
-    if (platformFilter === "All Platforms") return resumeEntries;
-    return resumeEntries.filter((e) => e.platformName === platformFilter);
-  }, [resumeEntries, platformFilter]);
+  const applySortAndFilter = (entries: JobEntry[]) => {
+    let result = entries;
+    if (platformFilter !== "All Platforms") {
+      result = result.filter((e) => e.platformName === platformFilter);
+    }
+    if (sortMode === "newest") {
+      result = [...result].sort((a, b) => a.postedDaysAgo - b.postedDaysAgo);
+    }
+    return result;
+  };
 
-  const filteredPreferredEntries = useMemo(() => {
-    if (platformFilter === "All Platforms") return preferredEntries;
-    return preferredEntries.filter((e) => e.platformName === platformFilter);
-  }, [preferredEntries, platformFilter]);
+  const filteredResumeEntries = useMemo(
+    () => applySortAndFilter(resumeEntries),
+    [resumeEntries, platformFilter, sortMode]
+  );
+
+  const filteredPreferredEntries = useMemo(
+    () => applySortAndFilter(preferredEntries),
+    [preferredEntries, platformFilter, sortMode]
+  );
 
   const totalJobsFound = resumeEntries.length + preferredEntries.length;
 
@@ -407,7 +582,7 @@ export default function Dashboard() {
         platform: entry.platformName,
         role: entry.title,
         company: entry.subtitle,
-        location: entry.location,
+        location: entry.locationText,
         url: entry.url,
         linkType: entry.linkType,
       }),
@@ -431,13 +606,6 @@ export default function Dashboard() {
       });
   };
 
-  // -----------------------------------------------------
-  // PROFILE SCORE — a simple heuristic from resume signal,
-  // not a claim of any formal HR scoring methodology.
-  // -----------------------------------------------------
-
-  const profileScore = parsedData ? Math.min(100, parsedData.skills.length * 7 + 15) : 0;
-
   const handleLogout = () => {
     fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).finally(() => {
       window.location.href = "/login";
@@ -452,13 +620,7 @@ export default function Dashboard() {
       {/* ===================== NAV ===================== */}
       <nav className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
         <span className="text-lg font-extrabold text-zinc-900">EaseMize</span>
-        <button
-          onClick={handleLogout}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-500 hover:text-zinc-800 transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Log out
-        </button>
+        <SettingsMenu onLogout={handleLogout} />
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -495,9 +657,9 @@ export default function Dashboard() {
           <StatCard
             icon={<Gauge className="w-6 h-6 text-indigo-600" />}
             accent="#EEF2FF"
-            value={parsedData ? `${profileScore}` : "—"}
-            label="Profile Score"
-            sublabel={parsedData ? "Based on skills detected" : "Upload a resume to see this"}
+            value={parsedData ? `${parsedData.resume_score}` : "—"}
+            label="ATS Resume Score"
+            sublabel={parsedData ? "How strong your resume looks" : "Upload a resume to see this"}
           />
           <StatCard
             icon={<CheckCircle2 className="w-6 h-6 text-emerald-600" />}
@@ -588,29 +750,59 @@ export default function Dashboard() {
           )}
 
           {parsedData && !parsing && (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-zinc-500">Detected skills:</span>
-              {parsedData.skills.slice(0, 10).map((skill) => (
-                <span
-                  key={skill}
-                  className="text-xs font-medium bg-zinc-100 text-zinc-700 rounded-full px-3 py-1"
-                >
-                  {skill}
-                </span>
-              ))}
-              {parsedData.skills.length > 10 && (
-                <span className="text-xs text-zinc-400">
-                  +{parsedData.skills.length - 10} more
-                </span>
+            <>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-zinc-500">Detected skills:</span>
+                {parsedData.skills.slice(0, 10).map((skill) => (
+                  <span
+                    key={skill}
+                    className="text-xs font-medium bg-zinc-100 text-zinc-700 rounded-full px-3 py-1"
+                  >
+                    {skill}
+                  </span>
+                ))}
+                {parsedData.skills.length > 10 && (
+                  <span className="text-xs text-zinc-400">
+                    +{parsedData.skills.length - 10} more
+                  </span>
+                )}
+              </div>
+
+              {parsedData.resume_score_notes && parsedData.resume_score_notes.length > 0 && (
+                <div className="mt-5 pt-5 border-t border-zinc-100">
+                  <p className="text-xs font-semibold text-zinc-500 mb-2">
+                    Ways to strengthen your resume:
+                  </p>
+                  <ul className="space-y-1">
+                    {parsedData.resume_score_notes.slice(0, 4).map((note) => (
+                      <li key={note} className="text-sm text-zinc-600 flex items-start gap-2">
+                        <span className="text-indigo-500 mt-0.5">•</span>
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {/* ===================== RESULTS ===================== */}
-        {parsedData && (
+        {loadingSaved ? null : parsedData ? (
           <>
-            <div className="flex items-center justify-end mb-2">
+            <div className="flex items-center justify-end gap-3 mb-2">
+              <div className="relative">
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as SortMode)}
+                  className="appearance-none rounded-full border border-zinc-200 bg-white pl-4 pr-9 py-2 text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                >
+                  <option value="default">Default order</option>
+                  <option value="newest">Newest posted first</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              </div>
+
               <div className="relative">
                 <select
                   value={platformFilter}
@@ -649,7 +841,7 @@ export default function Dashboard() {
               </p>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

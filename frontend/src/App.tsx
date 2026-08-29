@@ -7,6 +7,7 @@ import HeroSection from "@/components/ui/glassmorphism-trust-hero";
 import BentoGrid01 from "@/components/ui/bento-grid-01";
 import CareerOnboardingForm from "@/components/ui/career-onboarding-form";
 import Dashboard from "@/components/ui/dashboard";
+import Account from "@/components/ui/account";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // =====================================================
@@ -58,7 +59,9 @@ function App() {
       <Route path="/features" element={<BentoGrid01 />} />
 
       {/* Public — reachable directly at 5173/get-started or via the
-          "Get Started" button on the hero page, no login needed. */}
+          "Get Started" button on the hero page, no login needed.
+          The form itself redirects to /main if onboarding is
+          already complete for this user. */}
       <Route path="/get-started" element={<CareerOnboardingForm />} />
 
       {/* Protected: only reachable with a valid session.
@@ -76,12 +79,23 @@ function App() {
       />
 
       {/* The main app hub: resume upload, job matches,
-          applied-jobs tracking, profile score. */}
+          applied-jobs tracking, resume strength score. */}
       <Route
         path="/main"
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Account settings — view/edit the onboarding answers
+          without redoing the whole form. */}
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Account />
           </ProtectedRoute>
         }
       />

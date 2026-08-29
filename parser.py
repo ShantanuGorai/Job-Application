@@ -494,6 +494,85 @@ def main():
 # JSON.parse it. On failure, prints {"error": "..."} instead
 # of raising, so the caller gets a clean message either way.
 
+# =====================================================
+# RESUME STRENGTH ("ATS") SCORE
+# =====================================================
+# A simple, transparent heuristic — not a claim of matching
+# any specific commercial ATS's actual algorithm. Scores
+# based on signals a resume screener genuinely cares about:
+# contact completeness, whether key sections exist at all,
+# a healthy (not empty, not padded) skill count, and a
+# reasonable overall length.
+
+def compute_resume_score(contact_info, education, experience, projects, skills, raw_text):
+    score = 0
+    notes = []
+
+    # Contact info completeness — 5 points each, 20 total
+    if contact_info.get("email"):
+        score += 5
+    else:
+        notes.append("Add a professional email address")
+
+    if contact_info.get("phone"):
+        score += 5
+    else:
+        notes.append("Add a phone number")
+
+    if contact_info.get("linkedin"):
+        score += 5
+    else:
+        notes.append("Add a LinkedIn profile link")
+
+    if contact_info.get("github"):
+        score += 5
+    else:
+        notes.append("Add a GitHub link or portfolio site")
+
+    # Education section present — 15 points
+    if education:
+        score += 15
+    else:
+        notes.append("Include an Education section")
+
+    # Experience section present with real content — 20 points
+    has_experience = bool(experience.get("roles_and_companies")) or bool(experience.get("duration_mentions"))
+    if has_experience:
+        score += 20
+    else:
+        notes.append("Include a Work Experience section with clear role details")
+
+    # Projects section present — 15 points
+    if projects:
+        score += 15
+    else:
+        notes.append("Add a Projects section showcasing your work")
+
+    # Healthy skill count — 20 points (scaled up if under 5)
+    skill_count = len(skills)
+    if skill_count >= 5:
+        score += 20
+    elif skill_count > 0:
+        score += int(20 * (skill_count / 5))
+        notes.append("List more of your relevant technical or professional skills")
+    else:
+        notes.append("Add a dedicated Skills section")
+
+    # Reasonable resume length — 10 points
+    word_count = len(raw_text.split())
+    if 150 <= word_count <= 1200:
+        score += 10
+    elif word_count < 150:
+        score += max(0, int(10 * (word_count / 150)))
+        notes.append("Your resume looks quite short — consider adding more detail")
+    else:
+        score += 5
+        notes.append("Your resume is quite long — consider trimming to the essentials")
+
+    score = min(100, max(0, score))
+    return score, notes
+
+
 def parse_resume_for_api(resume_path, role="", experience_months=0, location="India"):
     raw_text = extract_text_from_file(resume_path)
 
@@ -503,6 +582,15 @@ def parse_resume_for_api(resume_path, role="", experience_months=0, location="In
     extracted_skills = extract_and_sync_skills(raw_text)
     candidate_name = extract_name(raw_text)
     predicted_role = predict_best_role_ml(extracted_skills, raw_text)
+
+    contact_info = extract_contact_info(raw_text)
+    education = extract_education(raw_text)
+    experience = extract_experience(raw_text)
+    projects = extract_projects(raw_text)
+
+    resume_score, resume_score_notes = compute_resume_score(
+        contact_info, education, experience, projects, extracted_skills, raw_text
+    )
 
     preferred_role = role.strip() if role and role.strip() else None
 
@@ -539,6 +627,8 @@ def parse_resume_for_api(resume_path, role="", experience_months=0, location="In
         "preferred_role": preferred_role,
         "experience_months": experience_months,
         "location": location,
+        "resume_score": resume_score,
+        "resume_score_notes": resume_score_notes,
         "resume_matches": resume_matches,
         "preferred_matches": preferred_matches,
     }
