@@ -184,6 +184,8 @@ router.post("/", requireAuth, (req, res) => {
       // Clean up the temp resume file regardless of outcome
       fs.unlink(resumePath, () => {});
 
+      // Always log the full stderr server-side, even when we're
+      // about to return a friendlier message to the client.
       if (stderr) {
         console.error(`[parser.py stderr]\n${stderr}`);
       }
@@ -195,6 +197,8 @@ router.post("/", requireAuth, (req, res) => {
         });
       }
 
+      // parser.py prints diagnostic lines too — only the LAST
+      // non-empty line of stdout is the JSON payload.
       const lines = stdout.split("\n").map((l) => l.trim()).filter(Boolean);
       const lastLine = lines[lines.length - 1];
 
@@ -218,6 +222,10 @@ router.post("/", requireAuth, (req, res) => {
         });
       }
 
+      // Save this as the user's current resume analysis. Upsert on
+      // `user` — re-uploading always overwrites the previous result,
+      // so GET /latest below reflects the most recent resume, and a
+      // page refresh doesn't lose it.
       try {
         await ParsedResume.findOneAndUpdate(
           { user: req.user._id },
@@ -231,12 +239,22 @@ router.post("/", requireAuth, (req, res) => {
             location: result.location,
             resume_score: result.resume_score,
             resume_score_notes: result.resume_score_notes,
+            recommended_skills: result.recommended_skills,
+            preferred_recommended_skills: result.preferred_recommended_skills,
             resume_matches: result.resume_matches,
             preferred_matches: result.preferred_matches,
+            raw_text: result.raw_text,
+            contact_info: result.contact_info,
+            education: result.education,
+            experience: result.experience,
+            projects: result.projects,
+ 
           },
           { upsert: true, new: true }
         );
       } catch (saveError) {
+        // Don't fail the whole request just because saving for later
+        // didn't work — the person still gets their results right now.
         console.error("Could not save parsed resume:", saveError);
       }
 

@@ -16,9 +16,15 @@ import {
   Clock,
   Settings,
   User,
+  Search,
+  Lightbulb,
+  BookOpen,
+  Check,
 } from "lucide-react";
 import CareerIllustration from "@/components/ui/career-illustration";
 import { detectPlatform } from "@/lib/platforms";
+import { formatRelativeTime } from "@/lib/time";
+import TailorResume from "@/components/ui/tailor-resume";
 
 const API_URL = "http://localhost:5000";
 
@@ -55,6 +61,8 @@ interface ParsedResumeData {
   location: string;
   resume_score: number;
   resume_score_notes: string[];
+  recommended_skills: string[];
+  preferred_recommended_skills: string[];
   resume_matches: MatchSet;
   preferred_matches: MatchSet | null;
 }
@@ -70,6 +78,10 @@ interface AppliedJobRecord {
   _id: string;
   platform: string;
   role: string;
+  company: string;
+  location: string;
+  url: string;
+  linkType: "live" | "gateway";
   createdAt: string;
 }
 
@@ -119,6 +131,23 @@ function useTypewriter(text: string, speed = 45) {
 }
 
 // =====================================================
+// LIVE-UPDATING "X ago" LABEL
+// =====================================================
+// Re-renders periodically so "2m ago" naturally becomes
+// "3m ago", "1h ago", etc. without needing a page refresh.
+
+function RelativeTime({ date }: { date: string }) {
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => tick((t) => t + 1), 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <>{formatRelativeTime(date)}</>;
+}
+
+// =====================================================
 // PARSE A HUMAN "posted" STRING INTO A SORTABLE NUMBER
 // =====================================================
 // LinkedIn's scraped listings give text like "3 days ago",
@@ -152,8 +181,11 @@ function parsePostedToDays(posted: string): number {
 // TURN A MatchSet INTO DISPLAYABLE JobEntry[]
 // =====================================================
 
-function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
-  const liveEntries: JobEntry[] = (matchSet.live_jobs || []).map((job, i) => {
+function buildJobEntries(
+  matchSet: MatchSet,
+  roleLabel: string
+): { live: JobEntry[]; gateway: JobEntry[] } {
+  const live: JobEntry[] = (matchSet.live_jobs || []).map((job, i) => {
     const platform = detectPlatform(job.apply_url);
     return {
       id: `live-${roleLabel}-${i}`,
@@ -170,7 +202,7 @@ function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
     };
   });
 
-  const gatewayEntries: JobEntry[] = (matchSet.portal_links || []).map((link, i) => {
+  const gateway: JobEntry[] = (matchSet.portal_links || []).map((link, i) => {
     const platform = detectPlatform(link.url);
     return {
       id: `gateway-${roleLabel}-${i}`,
@@ -187,7 +219,7 @@ function buildJobEntries(matchSet: MatchSet, roleLabel: string): JobEntry[] {
     };
   });
 
-  return [...liveEntries, ...gatewayEntries];
+  return { live, gateway };
 }
 
 // =====================================================
@@ -290,15 +322,24 @@ function StatCard({
   value,
   sublabel,
   accent,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sublabel?: string;
   accent: string;
+  onClick?: () => void;
 }) {
+  const Wrapper = onClick ? "button" : "div";
+
   return (
-    <div className="rounded-2xl bg-white border border-zinc-100 shadow-sm shadow-zinc-100 p-5 flex items-center gap-4">
+    <Wrapper
+      onClick={onClick}
+      className={`w-full text-left rounded-2xl bg-white border border-zinc-100 shadow-sm shadow-zinc-100 p-5 flex items-center gap-4 ${
+        onClick ? "cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all" : ""
+      }`}
+    >
       <div
         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
         style={{ backgroundColor: accent }}
@@ -310,18 +351,66 @@ function StatCard({
         <p className="text-sm text-zinc-500 truncate">{label}</p>
         {sublabel && <p className="text-xs text-zinc-400 mt-0.5">{sublabel}</p>}
       </div>
-    </div>
+    </Wrapper>
+  );
+}
+
+function AppliedCheckbox({
+  checked,
+  onToggle,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-2 select-none"
+    >
+      <span
+        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+          checked ? "bg-emerald-500 border-emerald-500" : "bg-white border-zinc-300"
+        }`}
+      >
+        <AnimatePresence>
+          {checked && (
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 24 }}
+            >
+              <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </span>
+      <span
+        className={`text-sm font-semibold transition-colors ${
+          checked ? "text-emerald-600" : "text-zinc-500"
+        }`}
+      >
+        Already Applied
+      </span>
+    </button>
   );
 }
 
 function JobCard({
   entry,
   index,
-  onApply,
+  appliedAt,
+  onVisit,
+  onToggleApplied,
+  onGeneratePitch,
 }: {
   entry: JobEntry;
   index: number;
-  onApply: (entry: JobEntry) => void;
+  appliedAt?: string;
+  onVisit: (entry: JobEntry) => void;
+  onToggleApplied: (entry: JobEntry, applied: boolean) => void;
+  onGeneratePitch: (entry: JobEntry) => void;
 }) {
   return (
     <motion.div
@@ -349,7 +438,7 @@ function JobCard({
       </div>
 
       {(entry.locationText || entry.postedText) && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
           {entry.locationText && (
             <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
               <MapPin className="w-3.5 h-3.5" />
@@ -365,49 +454,364 @@ function JobCard({
         </div>
       )}
 
-      <button
-        onClick={() => onApply(entry)}
-        className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 px-4 py-2.5 text-sm font-semibold hover:bg-indigo-100 transition-colors"
-      >
-        {entry.buttonLabel}
-        <ExternalLink className="w-3.5 h-3.5" />
-      </button>
+      {appliedAt && (
+        <p className="text-xs font-medium text-emerald-600 mb-3">
+          Applied <RelativeTime date={appliedAt} />
+        </p>
+      )}
+
+      {entry.linkType === "live" && (
+        <div>
+          <button
+            onClick={() => onGeneratePitch(entry)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-700 transition-colors mb-3 self-start"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Generate tailored pitch
+          </button>
+          <TailorResume jobTitle={entry.title} company={entry.subtitle} jobUrl={entry.url} />
+        </div>
+      )}
+
+      <div className="mt-auto flex items-center justify-between gap-3 pt-1">
+        <AppliedCheckbox
+          checked={!!appliedAt}
+          onToggle={() => onToggleApplied(entry, !appliedAt)}
+        />
+
+        <button
+          onClick={() => onVisit(entry)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 px-4 py-2.5 text-sm font-semibold hover:bg-indigo-100 transition-colors flex-shrink-0"
+        >
+          {entry.buttonLabel}
+          <ExternalLink className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </motion.div>
   );
 }
 
-function JobSection({
-  title,
-  subtitle,
-  entries,
-  onApply,
-}: {
-  title: string;
-  subtitle?: string;
-  entries: JobEntry[];
-  onApply: (entry: JobEntry) => void;
-}) {
-  if (entries.length === 0) return null;
+function RecommendedForYou({ data }: { data: ParsedResumeData }) {
+  const hasNotes = data.resume_score_notes && data.resume_score_notes.length > 0;
+  const hasPredictedSkills = data.recommended_skills && data.recommended_skills.length > 0;
+  const hasPreferredSkills =
+    data.preferred_recommended_skills && data.preferred_recommended_skills.length > 0;
+
+  if (!hasNotes && !hasPredictedSkills && !hasPreferredSkills) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.4 }}
+      viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.4 }}
-      className="mb-10"
+      className="rounded-2xl bg-white border border-zinc-100 shadow-sm shadow-zinc-100 p-6 mb-8"
     >
-      <div className="mb-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Lightbulb className="w-5 h-5 text-amber-500" />
+        <h2 className="text-lg font-bold text-zinc-900">Recommended For You</h2>
+      </div>
+      <p className="text-sm text-zinc-500 mb-5">
+        Tailored to the skills we found on your resume and the role you're aiming for.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {hasNotes && (
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide">
+              Strengthen your resume
+            </p>
+            <ul className="space-y-1.5">
+              {data.resume_score_notes.slice(0, 5).map((note) => (
+                <li key={note} className="text-sm text-zinc-600 flex items-start gap-2">
+                  <span className="text-indigo-500 mt-0.5">•</span>
+                  {note}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {hasPredictedSkills && (
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              Skills to learn for {data.predicted_role}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {data.recommended_skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-3 py-1"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hasPreferredSkills && data.preferred_role && (
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              Skills to learn for {data.preferred_role}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {data.preferred_recommended_skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-3 py-1"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function EndOfResults() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.5 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col items-center text-center py-14 px-6"
+    >
+      <img
+        src="https://linkilo.co/wp-content/uploads/2023/02/deadend-page.jpg"
+        alt="You've reached the end of the current results"
+        className="w-full max-w-xs h-auto rounded-2xl mb-6 opacity-90"
+      />
+      <h3 className="text-lg font-bold text-zinc-900 mb-1.5">
+        That's everything we found for now
+      </h3>
+      <p className="text-sm text-zinc-500 max-w-sm">
+        New roles get posted on these platforms every day. Check back soon, or try a different
+        location or an updated resume to widen your matches.
+      </p>
+    </motion.div>
+  );
+}
+
+function PitchModal({
+  open,
+  loading,
+  error,
+  pitch,
+  jobTitle,
+  usedJobDescription,
+  onClose,
+}: {
+  open: boolean;
+  loading: boolean;
+  error: string;
+  pitch: string;
+  jobTitle: string;
+  usedJobDescription: boolean;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(pitch);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl bg-white shadow-xl p-6"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-5 h-5 text-violet-600" />
+              <h3 className="text-lg font-bold text-zinc-900">Tailored Pitch</h3>
+            </div>
+            <p className="text-sm text-zinc-500 mb-5 line-clamp-1">for {jobTitle}</p>
+
+            {loading && (
+              <div className="py-10 text-center">
+                <p className="text-sm text-violet-600 font-medium animate-pulse">
+                  Reading the job description and writing your pitch...
+                </p>
+              </div>
+            )}
+
+            {!loading && error && <p className="text-sm text-red-600 whitespace-pre-line">{error}</p>}
+
+            {!loading && !error && pitch && (
+              <>
+                <div className="rounded-xl bg-zinc-50 border border-zinc-100 p-4 text-sm text-zinc-700 leading-relaxed max-h-80 overflow-y-auto whitespace-pre-line">
+                  {pitch}
+                </div>
+                {!usedJobDescription && (
+                  <p className="text-xs text-zinc-400 mt-2">
+                    We couldn't read the full job description for this posting, so this pitch is
+                    based on the job title and your profile only.
+                  </p>
+                )}
+                <div className="flex items-center gap-3 mt-5">
+                  <button
+                    onClick={handleCopy}
+                    className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition-colors"
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="text-sm font-semibold text-zinc-500 hover:text-zinc-800 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {!loading && error && (
+              <button
+                onClick={onClose}
+                className="mt-5 text-sm font-semibold text-zinc-500 hover:text-zinc-800 transition-colors"
+              >
+                Close
+              </button>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function JobGrid({
+  entries,
+  appliedMap,
+  onVisit,
+  onToggleApplied,
+  onGeneratePitch,
+}: {
+  entries: JobEntry[];
+  appliedMap: Record<string, string>;
+  onVisit: (entry: JobEntry) => void;
+  onToggleApplied: (entry: JobEntry, applied: boolean) => void;
+  onGeneratePitch: (entry: JobEntry) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {entries.map((entry, i) => (
+        <JobCard
+          key={entry.id}
+          entry={entry}
+          index={i}
+          appliedAt={appliedMap[entry.url]}
+          onVisit={onVisit}
+          onToggleApplied={onToggleApplied}
+          onGeneratePitch={onGeneratePitch}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RoleMatchBlock({
+  title,
+  subtitle,
+  liveEntries,
+  gatewayEntries,
+  appliedMap,
+  onVisit,
+  onToggleApplied,
+  onGeneratePitch,
+}: {
+  title: string;
+  subtitle?: string;
+  liveEntries: JobEntry[];
+  gatewayEntries: JobEntry[];
+  appliedMap: Record<string, string>;
+  onVisit: (entry: JobEntry) => void;
+  onToggleApplied: (entry: JobEntry, applied: boolean) => void;
+  onGeneratePitch: (entry: JobEntry) => void;
+}) {
+  if (liveEntries.length === 0 && gatewayEntries.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.4 }}
+      className="mb-12"
+    >
+      <div className="mb-6">
         <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
         {subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}
       </div>
 
-      {/* Max 2 cards per row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {entries.map((entry, i) => (
-          <JobCard key={entry.id} entry={entry} index={i} onApply={onApply} />
-        ))}
-      </div>
+      {liveEntries.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-start gap-2.5 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-zinc-800">Direct Job Postings</h3>
+              <p className="text-xs text-zinc-500">
+                Real, individual listings we found live — click Apply to go straight to that
+                job's own application page. Check "Already Applied" once you've submitted it.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <JobGrid
+              entries={liveEntries}
+              appliedMap={appliedMap}
+              onVisit={onVisit}
+              onToggleApplied={onToggleApplied}
+              onGeneratePitch={onGeneratePitch}
+            />
+          </div>
+        </div>
+      )}
+
+      {gatewayEntries.length > 0 && (
+        <div>
+          <div className="flex items-start gap-2.5 mb-1">
+            <Search className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-zinc-800">Search More Platforms</h3>
+              <p className="text-xs text-zinc-500">
+                These aren't individual jobs yet — each button opens a pre-filled search on that
+                platform so you can browse and pick a listing yourself.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <JobGrid
+              entries={gatewayEntries}
+              appliedMap={appliedMap}
+              onVisit={onVisit}
+              onToggleApplied={onToggleApplied}
+              onGeneratePitch={onGeneratePitch}
+            />
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -417,6 +821,7 @@ function JobSection({
 // =====================================================
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<CareerProfile | null>(null);
@@ -450,14 +855,15 @@ export default function Dashboard() {
       .then((data) => {
         if (data.success && data.profile) setProfile(data.profile);
       })
-      .catch(() => {});
+      .catch((err) => console.error("Could not load profile:", err));
 
     fetch(`${API_URL}/api/applied-jobs`, { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setAppliedJobs(data.jobs);
+        else console.error("Could not load applied jobs:", data.message);
       })
-      .catch(() => {});
+      .catch((err) => console.error("Could not load applied jobs:", err));
 
     fetch(`${API_URL}/api/parse-resume/latest`, { credentials: "include" })
       .then((r) => r.json())
@@ -524,25 +930,31 @@ export default function Dashboard() {
   };
 
   // -----------------------------------------------------
-  // BUILD JOB ENTRY LISTS — one per section
+  // BUILD JOB ENTRY LISTS — split by role AND by type
   // -----------------------------------------------------
 
-  const resumeEntries: JobEntry[] = useMemo(() => {
-    if (!parsedData) return [];
+  const resumeSplit = useMemo(() => {
+    if (!parsedData) return { live: [], gateway: [] };
     return buildJobEntries(parsedData.resume_matches, parsedData.predicted_role);
   }, [parsedData]);
 
-  const preferredEntries: JobEntry[] = useMemo(() => {
-    if (!parsedData || !parsedData.preferred_matches || !parsedData.preferred_role) return [];
+  const preferredSplit = useMemo(() => {
+    if (!parsedData || !parsedData.preferred_matches || !parsedData.preferred_role) {
+      return { live: [], gateway: [] };
+    }
     return buildJobEntries(parsedData.preferred_matches, parsedData.preferred_role);
   }, [parsedData]);
 
   const platformOptions = useMemo(() => {
-    const names = Array.from(
-      new Set([...resumeEntries, ...preferredEntries].map((e) => e.platformName))
-    );
+    const all = [
+      ...resumeSplit.live,
+      ...resumeSplit.gateway,
+      ...preferredSplit.live,
+      ...preferredSplit.gateway,
+    ];
+    const names = Array.from(new Set(all.map((e) => e.platformName)));
     return ["All Platforms", ...names];
-  }, [resumeEntries, preferredEntries]);
+  }, [resumeSplit, preferredSplit]);
 
   const applySortAndFilter = (entries: JobEntry[]) => {
     let result = entries;
@@ -555,61 +967,179 @@ export default function Dashboard() {
     return result;
   };
 
-  const filteredResumeEntries = useMemo(
-    () => applySortAndFilter(resumeEntries),
-    [resumeEntries, platformFilter, sortMode]
+  const filteredResumeLive = useMemo(
+    () => applySortAndFilter(resumeSplit.live),
+    [resumeSplit, platformFilter, sortMode]
+  );
+  const filteredResumeGateway = useMemo(
+    () => applySortAndFilter(resumeSplit.gateway),
+    [resumeSplit, platformFilter, sortMode]
+  );
+  const filteredPreferredLive = useMemo(
+    () => applySortAndFilter(preferredSplit.live),
+    [preferredSplit, platformFilter, sortMode]
+  );
+  const filteredPreferredGateway = useMemo(
+    () => applySortAndFilter(preferredSplit.gateway),
+    [preferredSplit, platformFilter, sortMode]
   );
 
-  const filteredPreferredEntries = useMemo(
-    () => applySortAndFilter(preferredEntries),
-    [preferredEntries, platformFilter, sortMode]
-  );
+  const totalJobsFound =
+    resumeSplit.live.length +
+    resumeSplit.gateway.length +
+    preferredSplit.live.length +
+    preferredSplit.gateway.length;
 
-  const totalJobsFound = resumeEntries.length + preferredEntries.length;
+  // Maps a job URL to when the person confirmed they applied to it —
+  // only set when they explicitly check "Already Applied", never
+  // automatically, since we have no way to know what happened on
+  // the external site.
+  const appliedMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const job of appliedJobs) {
+      if (!map[job.url] || new Date(job.createdAt) > new Date(map[job.url])) {
+        map[job.url] = job.createdAt;
+      }
+    }
+    return map;
+  }, [appliedJobs]);
+
+  const appliedIdByUrl = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const job of appliedJobs) {
+      map[job.url] = job._id;
+    }
+    return map;
+  }, [appliedJobs]);
 
   // -----------------------------------------------------
-  // APPLY CLICK — track then open in a new tab
+  // VISIT — just opens the link, no tracking implied
   // -----------------------------------------------------
 
-  const handleApply = (entry: JobEntry) => {
+  const handleVisit = (entry: JobEntry) => {
     window.open(entry.url, "_blank", "noopener,noreferrer");
+  };
 
-    fetch(`${API_URL}/api/applied-jobs`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        platform: entry.platformName,
-        role: entry.title,
-        company: entry.subtitle,
-        location: entry.locationText,
-        url: entry.url,
-        linkType: entry.linkType,
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) {
-          setAppliedJobs((prev) => [
-            {
-              _id: data.id,
-              platform: entry.platformName,
-              role: entry.title,
-              createdAt: new Date().toISOString(),
-            },
-            ...prev,
-          ]);
+  // -----------------------------------------------------
+  // TOGGLE "ALREADY APPLIED" — the only thing that actually
+  // creates/removes an AppliedJob record. Errors are surfaced
+  // (not silently swallowed) since fetch() doesn't reject on
+  // 4xx/5xx responses on its own.
+  // -----------------------------------------------------
+
+  const handleToggleApplied = async (entry: JobEntry, applied: boolean) => {
+    if (applied) {
+      try {
+        const response = await fetch(`${API_URL}/api/applied-jobs`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platform: entry.platformName,
+            role: entry.title,
+            company: entry.subtitle,
+            location: entry.locationText,
+            url: entry.url,
+            linkType: entry.linkType,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || `Request failed (${response.status})`);
         }
-      })
-      .catch(() => {
-        // Tracking is best-effort — the tab already opened either way.
-      });
+
+        setAppliedJobs((prev) => [
+          {
+            _id: data.id,
+            platform: entry.platformName,
+            role: entry.title,
+            company: entry.subtitle,
+            location: entry.locationText,
+            url: entry.url,
+            linkType: entry.linkType,
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      } catch (error) {
+        console.error("Could not mark this job as applied:", error);
+      }
+    } else {
+      const id = appliedIdByUrl[entry.url];
+      if (!id) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/applied-jobs/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || `Request failed (${response.status})`);
+        }
+
+        setAppliedJobs((prev) => prev.filter((j) => j._id !== id));
+      } catch (error) {
+        console.error("Could not un-mark this job:", error);
+      }
+    }
   };
 
   const handleLogout = () => {
     fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).finally(() => {
       window.location.href = "/login";
     });
+  };
+
+  // -----------------------------------------------------
+  // AI-TAILORED PITCH GENERATOR
+  // -----------------------------------------------------
+
+  const [pitchOpen, setPitchOpen] = useState(false);
+  const [pitchLoading, setPitchLoading] = useState(false);
+  const [pitchError, setPitchError] = useState("");
+  const [pitchText, setPitchText] = useState("");
+  const [pitchUsedJD, setPitchUsedJD] = useState(false);
+  const [pitchJobTitle, setPitchJobTitle] = useState("");
+
+  const handleGeneratePitch = async (entry: JobEntry) => {
+    setPitchOpen(true);
+    setPitchLoading(true);
+    setPitchError("");
+    setPitchText("");
+    setPitchJobTitle(entry.title);
+
+    try {
+      const response = await fetch(`${API_URL}/api/generate-pitch`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobUrl: entry.url,
+          jobTitle: entry.title,
+          company: entry.subtitle,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Could not generate a pitch right now.");
+      }
+
+      setPitchText(data.pitch);
+      setPitchUsedJD(!!data.usedJobDescription);
+    } catch (error) {
+      setPitchError(
+        error instanceof Error ? error.message : "Could not generate a pitch right now."
+      );
+    } finally {
+      setPitchLoading(false);
+    }
   };
 
   return (
@@ -666,6 +1196,8 @@ export default function Dashboard() {
             accent="#ECFDF5"
             value={String(appliedJobs.length)}
             label="Applied Jobs"
+            sublabel="Click to view all"
+            onClick={() => navigate("/jobs-applied")}
           />
           <StatCard
             icon={<Briefcase className="w-6 h-6 text-amber-600" />}
@@ -750,42 +1282,27 @@ export default function Dashboard() {
           )}
 
           {parsedData && !parsing && (
-            <>
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-zinc-500">Detected skills:</span>
-                {parsedData.skills.slice(0, 10).map((skill) => (
-                  <span
-                    key={skill}
-                    className="text-xs font-medium bg-zinc-100 text-zinc-700 rounded-full px-3 py-1"
-                  >
-                    {skill}
-                  </span>
-                ))}
-                {parsedData.skills.length > 10 && (
-                  <span className="text-xs text-zinc-400">
-                    +{parsedData.skills.length - 10} more
-                  </span>
-                )}
-              </div>
-
-              {parsedData.resume_score_notes && parsedData.resume_score_notes.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-zinc-100">
-                  <p className="text-xs font-semibold text-zinc-500 mb-2">
-                    Ways to strengthen your resume:
-                  </p>
-                  <ul className="space-y-1">
-                    {parsedData.resume_score_notes.slice(0, 4).map((note) => (
-                      <li key={note} className="text-sm text-zinc-600 flex items-start gap-2">
-                        <span className="text-indigo-500 mt-0.5">•</span>
-                        {note}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-zinc-500">Detected skills:</span>
+              {parsedData.skills.slice(0, 10).map((skill) => (
+                <span
+                  key={skill}
+                  className="text-xs font-medium bg-zinc-100 text-zinc-700 rounded-full px-3 py-1"
+                >
+                  {skill}
+                </span>
+              ))}
+              {parsedData.skills.length > 10 && (
+                <span className="text-xs text-zinc-400">
+                  +{parsedData.skills.length - 10} more
+                </span>
               )}
-            </>
+            </div>
           )}
         </div>
+
+        {/* ===================== RECOMMENDED FOR YOU ===================== */}
+        {parsedData && !parsing && <RecommendedForYou data={parsedData} />}
 
         {/* ===================== RESULTS ===================== */}
         {loadingSaved ? null : parsedData ? (
@@ -819,29 +1336,49 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <JobSection
+            <RoleMatchBlock
               title="Best matches for the given resume"
               subtitle={`Based on your skills, we think you're a great fit for ${parsedData.predicted_role}`}
-              entries={filteredResumeEntries}
-              onApply={handleApply}
+              liveEntries={filteredResumeLive}
+              gatewayEntries={filteredResumeGateway}
+              appliedMap={appliedMap}
+              onVisit={handleVisit}
+              onToggleApplied={handleToggleApplied}
+              onGeneratePitch={handleGeneratePitch}
             />
 
             {parsedData.preferred_role && (
-              <JobSection
+              <RoleMatchBlock
                 title={`Matches for "${parsedData.preferred_role}"`}
                 subtitle="Because you told us this is the role you're targeting"
-                entries={filteredPreferredEntries}
-                onApply={handleApply}
+                liveEntries={filteredPreferredLive}
+                gatewayEntries={filteredPreferredGateway}
+                appliedMap={appliedMap}
+                onVisit={handleVisit}
+                onToggleApplied={handleToggleApplied}
+                onGeneratePitch={handleGeneratePitch}
               />
             )}
 
-            {resumeEntries.length === 0 && preferredEntries.length === 0 && (
+            {totalJobsFound === 0 ? (
               <p className="text-sm text-zinc-500 py-8 text-center">
                 No results found. Try a different resume or location.
               </p>
+            ) : (
+              <EndOfResults />
             )}
           </>
         ) : null}
+
+        <PitchModal
+          open={pitchOpen}
+          loading={pitchLoading}
+          error={pitchError}
+          pitch={pitchText}
+          jobTitle={pitchJobTitle}
+          usedJobDescription={pitchUsedJD}
+          onClose={() => setPitchOpen(false)}
+        />
       </div>
     </div>
   );

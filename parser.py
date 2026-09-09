@@ -233,6 +233,54 @@ def extract_and_sync_skills(text):
     return sorted(list(detected_skills))
 
 
+# Multi-domain industry contextual profiles — module-level so both
+# predict_best_role_ml() and suggest_missing_skills() can reuse the
+# same canonical skill list per role.
+ROLE_DEFINITIONS = {
+    # Tech & Engineering
+    "Machine Learning / AI Engineer": "machine learning, classification, clustering, regression, anomaly detection, behavioral modeling, hyperparameter tuning, regularization, time series analysis, deep learning, neural networks, PyTorch, TensorFlow, Python, scikit-learn",
+    "Data Scientist / Data Analyst": "data science, data analysis, statistics, SQL, Pandas, NumPy, Tableau, PowerBI, predictive modeling, data visualization, feature engineering, Excel",
+    "Frontend Developer": "frontend web development, UI, React, Next.js, Angular, Vue, HTML, CSS, Tailwind CSS, Bootstrap, Typescript, Javascript, responsive design, Redux",
+    "Backend Developer": "backend server development, API design, Node.js, Express, Django, Flask, FastAPI, Spring Boot, SQL, PostgreSQL, MongoDB, microservices, REST APIs, Websockets",
+    "Full Stack Developer": "full stack web development, React, Next.js, Node.js, MongoDB, SQL, Python, client and server architecture, frontend and backend development",
+    "Cyber Security / SOC Analyst": "cyber security, network defense, penetration testing, SIEM, SOC, Wireshark, Scapy, vulnerability assessment, Linux security, threat analysis",
+    "DevOps & Cloud Engineer": "devops, cloud computing, Docker, Kubernetes, CI/CD pipelines, AWS, Terraform, Linux sysadmin, infrastructure as code",
+    "Mobile App Developer": "mobile app development, Android, iOS, React Native, Flutter, Swift, Kotlin",
+
+    # Non-Tech & Business
+    "Human Resources (HR) Specialist": "human resources, recruitment, talent acquisition, employee onboarding, payroll, HR policies, performance management, employee relations",
+    "Digital Marketing & SEO Specialist": "digital marketing, SEO, SEM, social media management, Google Ads, content marketing, email campaigns, brand strategy",
+    "Financial Analyst / Accountant": "accounting, financial analysis, budgeting, taxation, balance sheet, auditing, financial modeling, Tally, Excel",
+    "Graphic & UI/UX Designer": "graphic design, Photoshop, Illustrator, Figma, UI/UX, video editing, branding, Canva, visual design",
+    "Business Development & Sales Executive": "business development, B2B sales, lead generation, client negotiation, CRM, Salesforce, cold calling, revenue growth"
+}
+
+
+def suggest_missing_skills(role_name, current_skills, max_suggestions=5):
+    """
+    Compares the canonical skill list for a predicted/target role
+    against the skills actually detected on this resume, and
+    returns up to `max_suggestions` skills from that role's profile
+    the person doesn't already have — a simple, transparent gap
+    list, not a claim of exhaustive market research.
+    """
+    role_skill_text = ROLE_DEFINITIONS.get(role_name, "")
+    if not role_skill_text:
+        return []
+
+    role_skills = [s.strip() for s in role_skill_text.split(",") if s.strip()]
+    current_lower = {s.lower() for s in current_skills}
+
+    missing = []
+    for skill in role_skills:
+        if skill.lower() not in current_lower:
+            missing.append(skill)
+        if len(missing) >= max_suggestions:
+            break
+
+    return missing
+
+
 def predict_best_role_ml(skills, resume_text=""):
     """
     Evaluates individual skills against industry domains using Sentence-Transformers.
@@ -241,26 +289,7 @@ def predict_best_role_ml(skills, resume_text=""):
     if not skills:
         return "Software Engineer"
 
-    # Multi-domain industry contextual profiles
-    role_definitions = {
-        # Tech & Engineering
-        "Machine Learning / AI Engineer": "machine learning, classification, clustering, regression, anomaly detection, behavioral modeling, hyperparameter tuning, regularization, time series analysis, deep learning, neural networks, PyTorch, TensorFlow, Python, scikit-learn",
-        "Data Scientist / Data Analyst": "data science, data analysis, statistics, SQL, Pandas, NumPy, Tableau, PowerBI, predictive modeling, data visualization, feature engineering, Excel",
-        "Frontend Developer": "frontend web development, UI, React, Next.js, Angular, Vue, HTML, CSS, Tailwind CSS, Bootstrap, Typescript, Javascript, responsive design, Redux",
-        "Backend Developer": "backend server development, API design, Node.js, Express, Django, Flask, FastAPI, Spring Boot, SQL, PostgreSQL, MongoDB, microservices, REST APIs, Websockets",
-        "Full Stack Developer": "full stack web development, React, Next.js, Node.js, MongoDB, SQL, Python, client and server architecture, frontend and backend development",
-        "Cyber Security / SOC Analyst": "cyber security, network defense, penetration testing, SIEM, SOC, Wireshark, Scapy, vulnerability assessment, Linux security, threat analysis",
-        "DevOps & Cloud Engineer": "devops, cloud computing, Docker, Kubernetes, CI/CD pipelines, AWS, Terraform, Linux sysadmin, infrastructure as code",
-        "Mobile App Developer": "mobile app development, Android, iOS, React Native, Flutter, Swift, Kotlin",
-        
-        # Non-Tech & Business
-        "Human Resources (HR) Specialist": "human resources, recruitment, talent acquisition, employee onboarding, payroll, HR policies, performance management, employee relations",
-        "Digital Marketing & SEO Specialist": "digital marketing, SEO, SEM, social media management, Google Ads, content marketing, email campaigns, brand strategy",
-        "Financial Analyst / Accountant": "accounting, financial analysis, budgeting, taxation, balance sheet, auditing, financial modeling, Tally, Excel",
-        "Graphic & UI/UX Designer": "graphic design, Photoshop, Illustrator, Figma, UI/UX, video editing, branding, Canva, visual design",
-        "Business Development & Sales Executive": "business development, B2B sales, lead generation, client negotiation, CRM, Salesforce, cold calling, revenue growth"
-    }
-
+    role_definitions = ROLE_DEFINITIONS
     role_names = list(role_definitions.keys())
     role_descriptions = list(role_definitions.values())
 
@@ -594,6 +623,12 @@ def parse_resume_for_api(resume_path, role="", experience_months=0, location="In
 
     preferred_role = role.strip() if role and role.strip() else None
 
+    recommended_skills = suggest_missing_skills(predicted_role, extracted_skills)
+    if preferred_role and preferred_role.strip().lower() != predicted_role.strip().lower():
+        preferred_recommended_skills = suggest_missing_skills(preferred_role, extracted_skills)
+    else:
+        preferred_recommended_skills = []
+
     def build_matches(target_role):
         live_jobs = fetch_direct_linkedin_jobs(target_role, experience_months, location, count=6)
         portal_sections = generate_all_portal_apply_links(target_role, experience_months, location)
@@ -629,8 +664,15 @@ def parse_resume_for_api(resume_path, role="", experience_months=0, location="In
         "location": location,
         "resume_score": resume_score,
         "resume_score_notes": resume_score_notes,
+        "recommended_skills": recommended_skills,
+        "preferred_recommended_skills": preferred_recommended_skills,
         "resume_matches": resume_matches,
         "preferred_matches": preferred_matches,
+        "contact_info": contact_info,
+        "education": education,
+        "experience": experience,
+        "projects": projects,
+        "raw_text": raw_text[:8000],
     }
 
 
@@ -643,9 +685,7 @@ def _get_flag_value(argv, flag_name, default=""):
 
 
 def run_api_mode(argv):
-    # argv is sys.argv, e.g.:
-    # ["parser.py", "--api", "<resume_path>", "--role", "...",
-    #  "--experience-months", "12", "--location", "India"]
+    
     resume_path = argv[2] if len(argv) > 2 else ""
 
     role = _get_flag_value(argv, "--role", "")
@@ -672,14 +712,45 @@ def run_api_mode(argv):
     except Exception as e:
         result = {"error": f"{type(e).__name__}: {e}"}
 
-    # ensure_ascii=True escapes any non-ASCII characters as \uXXXX
-    # instead of raw bytes, so this print can never hit the same
-    # console-encoding crash the interactive ✓ print did above.
+    
     print(json.dumps(result, ensure_ascii=True))
 
+
+def run_extract_only_mode(argv):
+    resume_path = argv[2] if len(argv) > 2 else ""
+
+    if not resume_path or not os.path.exists(resume_path):
+        print(json.dumps({"error": f"Resume file not found: {resume_path}"}, ensure_ascii=True))
+        return
+
+    try:
+        raw_text = extract_text_from_file(resume_path)
+
+        if not raw_text.strip():
+            print(json.dumps(
+                {"error": "Could not extract readable text from this document."},
+                ensure_ascii=True,
+            ))
+            return
+
+        result = {
+            "raw_text": raw_text[:8000],
+            "candidate_name": extract_name(raw_text),
+            "contact_info": extract_contact_info(raw_text),
+            "education": extract_education(raw_text),
+            "experience": extract_experience(raw_text),
+            "projects": extract_projects(raw_text),
+            "skills": extract_and_sync_skills(raw_text),
+        }
+    except Exception as e:
+        result = {"error": f"{type(e).__name__}: {e}"}
+
+    print(json.dumps(result, ensure_ascii=True))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--api":
         run_api_mode(sys.argv)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--extract-only":
+        run_extract_only_mode(sys.argv)
     else:
         main()

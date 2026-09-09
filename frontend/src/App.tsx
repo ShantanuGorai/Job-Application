@@ -8,6 +8,7 @@ import BentoGrid01 from "@/components/ui/bento-grid-01";
 import CareerOnboardingForm from "@/components/ui/career-onboarding-form";
 import Dashboard from "@/components/ui/dashboard";
 import Account from "@/components/ui/account";
+import JobsApplied from "@/components/ui/jobs-applied";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // =====================================================
@@ -96,6 +97,17 @@ function App() {
         element={
           <ProtectedRoute>
             <Account />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Full history of everything the user has clicked
+          Apply/Search on. */}
+      <Route
+        path="/jobs-applied"
+        element={
+          <ProtectedRoute>
+            <JobsApplied />
           </ProtectedRoute>
         }
       />

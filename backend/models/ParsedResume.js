@@ -23,12 +23,18 @@ const parsedResumeSchema = new mongoose.Schema(
 
     resume_score: { type: Number, default: 0 },
     resume_score_notes: { type: [String], default: [] },
+    recommended_skills: { type: [String], default: [] },
+    preferred_recommended_skills: { type: [String], default: [] },
 
-    // Stored as-is (Mixed) since these are nested job-result
-    // shapes from parser.py, not something this app needs to
-    // query into individually.
+    
     resume_matches: { type: mongoose.Schema.Types.Mixed, default: {} },
     preferred_matches: { type: mongoose.Schema.Types.Mixed, default: null },
+     raw_text: { type: String, default: "" },
+    contact_info: { type: mongoose.Schema.Types.Mixed, default: {} },
+    education: { type: [String], default: [] },
+    experience: { type: mongoose.Schema.Types.Mixed, default: {} },
+    projects: { type: [mongoose.Schema.Types.Mixed], default: [] },
+ 
   },
   { timestamps: true }
 );

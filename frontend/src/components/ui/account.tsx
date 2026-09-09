@@ -85,9 +85,6 @@ const WORK_PREFERENCE_OPTIONS = [
   "Open to travel",
 ];
 
-// =====================================================
-// SMALL SHARED PIECES (same styling as the onboarding form)
-// =====================================================
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-semibold text-zinc-900 mb-2">{children}</label>;
@@ -242,9 +239,6 @@ function Section({
   );
 }
 
-// =====================================================
-// MAIN ACCOUNT PAGE
-// =====================================================
 
 export default function Account() {
   const navigate = useNavigate();

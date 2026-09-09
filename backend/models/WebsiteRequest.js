@@ -2,9 +2,7 @@ const mongoose = require("mongoose");
 
 const websiteRequestSchema = new mongoose.Schema(
   {
-    // =====================================================
-    // PERSONAL INFO
-    // =====================================================
+    
 
     fullName: {
       type: String,
@@ -25,9 +23,7 @@ const websiteRequestSchema = new mongoose.Schema(
       default: "",
     },
 
-    // =====================================================
-    // PROFESSIONAL
-    // =====================================================
+  
 
     profession: {
       type: String,
@@ -40,9 +36,7 @@ const websiteRequestSchema = new mongoose.Schema(
       required: true,
     },
 
-    // =====================================================
-    // WEBSITE GOALS
-    // =====================================================
+  
 
     primaryGoal: {
       type: String,
@@ -55,9 +49,6 @@ const websiteRequestSchema = new mongoose.Schema(
       default: "",
     },
 
-    // =====================================================
-    // DESIGN
-    // =====================================================
 
     designStyle: {
       type: String,
@@ -70,10 +61,6 @@ const websiteRequestSchema = new mongoose.Schema(
       default: "",
     },
 
-    // =====================================================
-    // BUDGET & TIMELINE
-    // =====================================================
-
     budgetRange: {
       type: String,
       required: true,
@@ -84,9 +71,7 @@ const websiteRequestSchema = new mongoose.Schema(
       required: true,
     },
 
-    // =====================================================
-    // REQUIREMENTS
-    // =====================================================
+
 
     features: {
       type: [String],

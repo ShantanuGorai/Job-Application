@@ -11,13 +11,13 @@ const websiteRequestRoutes = require("./routes/websiteRequest");
 const careerProfileRoutes = require("./routes/careerProfile");
 const parseResumeRoutes = require("./routes/parseResume");
 const appliedJobsRoutes = require("./routes/appliedJobs");
+const generatePitchRoutes = require("./routes/generatePitch");
+const tailorResumeRoutes = require("./routes/tailorResume");
 
 const app = express();
 
 connectDB();
 
-// Now that login/hero/main all live in one merged frontend app,
-// there's only one origin that ever calls this API.
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -48,6 +48,8 @@ app.use("/api/website-requests", websiteRequestRoutes);
 app.use("/api/career-profiles", careerProfileRoutes);
 app.use("/api/parse-resume", parseResumeRoutes);
 app.use("/api/applied-jobs", appliedJobsRoutes);
+app.use("/api/generate-pitch", generatePitchRoutes);
+app.use("/api/tailor-resume", tailorResumeRoutes);
 
 app.get("/", (req, res) => {
   res.json({
