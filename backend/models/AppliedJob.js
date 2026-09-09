@@ -14,9 +14,7 @@ const appliedJobSchema = new mongoose.Schema(
     location: { type: String, default: "" },
     url: { type: String, required: true },
 
-    // "live" = an individual scraped posting (currently only from
-    // LinkedIn — see parser.py). "gateway" = a per-platform search
-    // link, not a specific posting, for every other platform.
+    
     linkType: {
       type: String,
       enum: ["live", "gateway"],

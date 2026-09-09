@@ -20,14 +20,6 @@ try:
 except ImportError:
     docx = None
 
-# Keep stdout reserved for the single JSON line that --api mode prints
-# at the end (see run_api_mode below) — everything else, including
-# this startup message, goes to stderr instead. Also force stdout/
-# stderr to UTF-8 so any unicode characters (like the ✓ used in
-# interactive mode further down) never crash on Windows' default
-# console codepage (cp1252) when this process's output is piped
-# rather than shown in a real terminal — which is exactly what
-# happens when Node spawns this script.
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
@@ -232,12 +224,7 @@ def extract_and_sync_skills(text):
 
     return sorted(list(detected_skills))
 
-
-# Multi-domain industry contextual profiles — module-level so both
-# predict_best_role_ml() and suggest_missing_skills() can reuse the
-# same canonical skill list per role.
 ROLE_DEFINITIONS = {
-    # Tech & Engineering
     "Machine Learning / AI Engineer": "machine learning, classification, clustering, regression, anomaly detection, behavioral modeling, hyperparameter tuning, regularization, time series analysis, deep learning, neural networks, PyTorch, TensorFlow, Python, scikit-learn",
     "Data Scientist / Data Analyst": "data science, data analysis, statistics, SQL, Pandas, NumPy, Tableau, PowerBI, predictive modeling, data visualization, feature engineering, Excel",
     "Frontend Developer": "frontend web development, UI, React, Next.js, Angular, Vue, HTML, CSS, Tailwind CSS, Bootstrap, Typescript, Javascript, responsive design, Redux",
@@ -247,7 +234,6 @@ ROLE_DEFINITIONS = {
     "DevOps & Cloud Engineer": "devops, cloud computing, Docker, Kubernetes, CI/CD pipelines, AWS, Terraform, Linux sysadmin, infrastructure as code",
     "Mobile App Developer": "mobile app development, Android, iOS, React Native, Flutter, Swift, Kotlin",
 
-    # Non-Tech & Business
     "Human Resources (HR) Specialist": "human resources, recruitment, talent acquisition, employee onboarding, payroll, HR policies, performance management, employee relations",
     "Digital Marketing & SEO Specialist": "digital marketing, SEO, SEM, social media management, Google Ads, content marketing, email campaigns, brand strategy",
     "Financial Analyst / Accountant": "accounting, financial analysis, budgeting, taxation, balance sheet, auditing, financial modeling, Tally, Excel",
@@ -296,10 +282,8 @@ def predict_best_role_ml(skills, resume_text=""):
     skill_embeddings = embed_model.encode(skills)
     role_embeddings = embed_model.encode(role_descriptions)
 
-    # Compute similarity matrix: (num_skills x num_roles)
     sim_matrix = cosine_similarity(skill_embeddings, role_embeddings)
 
-    # Aggregate semantic mass via weighted voting
     role_scores = {role: 0.0 for role in role_names}
     
     for i, skill in enumerate(skills):
@@ -416,7 +400,6 @@ def main():
     print("    ML-POWERED RESUME PARSER & UNIVERSAL JOB MATCHER")
     print("=" * 72)
 
-    # 1. Select and Parse Resume
     print("[*] Please select your Resume file (PDF, DOCX, or TXT)...")
     resume_path = select_resume_file()
 
@@ -510,34 +493,12 @@ def main():
     print("=" * 72)
 
 
-# =====================================================
-# NON-INTERACTIVE "--api" MODE
-# =====================================================
-# Invoked as: python parser.py --api <resume_path> --role <role>
-#             --experience-months <n> --location <location>
-#
-# No file dialog, no input() prompts — everything comes from
-# argv. Prints exactly ONE line of JSON to stdout (all other
-# output above goes to stderr) so a caller like Node's
-# child_process can just take the last stdout line and
-# JSON.parse it. On failure, prints {"error": "..."} instead
-# of raising, so the caller gets a clean message either way.
 
-# =====================================================
-# RESUME STRENGTH ("ATS") SCORE
-# =====================================================
-# A simple, transparent heuristic — not a claim of matching
-# any specific commercial ATS's actual algorithm. Scores
-# based on signals a resume screener genuinely cares about:
-# contact completeness, whether key sections exist at all,
-# a healthy (not empty, not padded) skill count, and a
-# reasonable overall length.
 
 def compute_resume_score(contact_info, education, experience, projects, skills, raw_text):
     score = 0
     notes = []
 
-    # Contact info completeness — 5 points each, 20 total
     if contact_info.get("email"):
         score += 5
     else:
@@ -558,26 +519,22 @@ def compute_resume_score(contact_info, education, experience, projects, skills, 
     else:
         notes.append("Add a GitHub link or portfolio site")
 
-    # Education section present — 15 points
     if education:
         score += 15
     else:
         notes.append("Include an Education section")
 
-    # Experience section present with real content — 20 points
     has_experience = bool(experience.get("roles_and_companies")) or bool(experience.get("duration_mentions"))
     if has_experience:
         score += 20
     else:
         notes.append("Include a Work Experience section with clear role details")
 
-    # Projects section present — 15 points
     if projects:
         score += 15
     else:
         notes.append("Add a Projects section showcasing your work")
 
-    # Healthy skill count — 20 points (scaled up if under 5)
     skill_count = len(skills)
     if skill_count >= 5:
         score += 20
@@ -587,7 +544,6 @@ def compute_resume_score(contact_info, education, experience, projects, skills, 
     else:
         notes.append("Add a dedicated Skills section")
 
-    # Reasonable resume length — 10 points
     word_count = len(raw_text.split())
     if 150 <= word_count <= 1200:
         score += 10
@@ -644,13 +600,8 @@ def parse_resume_for_api(resume_path, role="", experience_months=0, location="In
 
         return {"live_jobs": live_jobs, "portal_links": portal_links}
 
-    # Always compute matches for what the resume's own skills point to.
     resume_matches = build_matches(predicted_role)
 
-    # Only compute a second, separate set of matches if the person
-    # typed a preferred role at onboarding AND it's actually different
-    # from what their resume already predicts — no point duplicating
-    # the same search twice under two different headings.
     preferred_matches = None
     if preferred_role and preferred_role.strip().lower() != predicted_role.strip().lower():
         preferred_matches = build_matches(preferred_role)

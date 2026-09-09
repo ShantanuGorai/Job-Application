@@ -33,18 +33,11 @@ function looksLikeSectionHeader(line: string): boolean {
   const lower = trimmed.toLowerCase().replace(/[:\-–]+$/, "");
   if (SECTION_HEADER_KEYWORDS.includes(lower)) return true;
 
-  // All-caps short line (common resume header style), ignoring punctuation
   const letters = trimmed.replace(/[^a-zA-Z]/g, "");
   return letters.length > 2 && letters === letters.toUpperCase();
 }
 
-/**
- * Self-contained "Tailor My Resume" button + modal. Reuses the
- * resume already uploaded via the dashboard's parse-resume flow —
- * no separate upload needed here.
- *
- *   <TailorResume jobTitle={entry.title} company={entry.subtitle} jobUrl={entry.url} />
- */
+
 export default function TailorResume({ jobTitle, company, jobUrl }: TailorResumeProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);

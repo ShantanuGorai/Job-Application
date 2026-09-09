@@ -84,12 +84,6 @@ const websiteRequestSchema = new mongoose.Schema(
       default: "",
     },
 
-    // =====================================================
-    // LINK TO A LOGGED-IN USER, IF ANY
-    // =====================================================
-    // The form is public (no login required), but if the
-    // visitor happens to be logged in when they submit, we
-    // record which account it came from.
 
     user: {
       type: mongoose.Schema.Types.ObjectId,

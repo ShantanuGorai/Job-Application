@@ -4,9 +4,6 @@ const WebsiteRequest = require("../models/WebsiteRequest");
 const router = express.Router();
 
 
-// =====================================================
-// CREATE A WEBSITE REQUEST (Get Started form submission)
-// =====================================================
 
 router.post("/", async (req, res) => {
   try {
@@ -27,12 +24,6 @@ router.post("/", async (req, res) => {
       additionalInfo,
     } = req.body;
 
-
-    // -------------------------------------------------
-    // VALIDATION — mirrors the required fields on the
-    // frontend so the API can't be used to save garbage
-    // even if someone bypasses the UI.
-    // -------------------------------------------------
 
     if (!fullName || !email) {
       return res.status(400).json({
@@ -77,9 +68,6 @@ router.post("/", async (req, res) => {
     }
 
 
-    // -------------------------------------------------
-    // SAVE
-    // -------------------------------------------------
 
     const websiteRequest = await WebsiteRequest.create({
       fullName,
@@ -95,7 +83,6 @@ router.post("/", async (req, res) => {
       timeline,
       features,
       additionalInfo,
-      // Attach the logged-in user's id if there's an active session
       user: req.isAuthenticated?.() ? req.user._id : null,
     });
 

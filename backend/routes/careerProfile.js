@@ -4,13 +4,6 @@ const CareerProfile = require("../models/CareerProfile");
 const router = express.Router();
 
 
-// =====================================================
-// CREATE A CAREER PROFILE (onboarding form submission)
-// =====================================================
-// No file upload here anymore — resume upload happens
-// once, on the dashboard, right before running the parser.
-// This route just saves the plain form answers as JSON.
-
 router.post("/", async (req, res) => {
   try {
 
@@ -31,9 +24,6 @@ router.post("/", async (req, res) => {
     } = req.body;
 
 
-    // -------------------------------------------------
-    // VALIDATION
-    // -------------------------------------------------
 
     if (!fullName || !email) {
       return res.status(400).json({
@@ -78,9 +68,7 @@ router.post("/", async (req, res) => {
     }
 
 
-    // -------------------------------------------------
-    // SAVE
-    // -------------------------------------------------
+
 
     const careerProfile = await CareerProfile.create({
       fullName,
@@ -118,12 +106,6 @@ router.post("/", async (req, res) => {
 });
 
 
-// =====================================================
-// GET THE CURRENT USER'S MOST RECENT CAREER PROFILE
-// =====================================================
-// Used to check whether someone has already completed
-// onboarding (so the form isn't shown again) and to
-// pre-fill the resume parser's role/experience inputs.
 
 router.get("/me", async (req, res) => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
@@ -143,11 +125,6 @@ router.get("/me", async (req, res) => {
 });
 
 
-// =====================================================
-// UPDATE THE CURRENT USER'S CAREER PROFILE
-// =====================================================
-// Used by the Account page — edits the existing profile
-// in place instead of creating a new onboarding submission.
 
 router.put("/me", async (req, res) => {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
@@ -173,9 +150,7 @@ router.put("/me", async (req, res) => {
     } = req.body;
 
 
-    // -------------------------------------------------
-    // VALIDATION — same rules as the initial submission
-    // -------------------------------------------------
+    
 
     if (!fullName || !email) {
       return res.status(400).json({
@@ -220,9 +195,6 @@ router.put("/me", async (req, res) => {
     }
 
 
-    // -------------------------------------------------
-    // FIND AND UPDATE IN PLACE
-    // -------------------------------------------------
 
     const existing = await CareerProfile.findOne({ user: req.user._id }).sort({
       createdAt: -1,

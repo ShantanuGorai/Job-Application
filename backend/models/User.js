@@ -2,9 +2,6 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    // =====================================================
-    // BASIC USER DETAILS
-    // =====================================================
 
     name: {
       type: String,
@@ -25,9 +22,6 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // =====================================================
-    // OAUTH DETAILS
-    // =====================================================
 
     githubId: {
       type: String,
@@ -45,9 +39,6 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // =====================================================
-    // EMAIL VERIFICATION
-    // =====================================================
 
     emailVerified: {
       type: Boolean,

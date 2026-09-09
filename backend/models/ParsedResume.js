@@ -1,10 +1,4 @@
 const mongoose = require("mongoose");
-
-// One saved parse result per user — re-uploading a resume
-// overwrites the previous one (see the upsert in
-// routes/parseResume.js), so this always reflects the
-// user's MOST RECENT resume analysis, and survives a
-// page refresh without re-uploading anything.
 const parsedResumeSchema = new mongoose.Schema(
   {
     user: {

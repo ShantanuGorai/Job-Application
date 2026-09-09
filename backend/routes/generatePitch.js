@@ -15,9 +15,6 @@ function requireAuth(req, res, next) {
 }
 
 
-// =====================================================
-// SCRAPE THE JOB DESCRIPTION TEXT FROM A LIVE POSTING
-// =====================================================
 
 async function scrapeJobDescription(jobUrl) {
   if (!jobUrl) return "";
@@ -59,10 +56,6 @@ async function scrapeJobDescription(jobUrl) {
 }
 
 
-// =====================================================
-// CALL THE GEMINI API
-// =====================================================
-
 async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -95,10 +88,6 @@ async function callGemini(prompt) {
   return text.trim();
 }
 
-
-// =====================================================
-// POST /api/generate-pitch
-// =====================================================
 
 router.post("/", requireAuth, async (req, res) => {
   if (!GEMINI_API_KEY) {
@@ -138,12 +127,6 @@ router.post("/", requireAuth, async (req, res) => {
 
     const jobDescription = await scrapeJobDescription(jobUrl);
 
-    // IMPORTANT: the pitch is always written for THIS specific job
-    // (jobTitle, from whichever card was clicked) — never for the
-    // resume's own predicted role. A candidate's resume might be
-    // ML-flavored while they're deliberately pitching for an HR
-    // role (or vice versa); the job actually being applied to must
-    // win, with skills used only as supporting evidence of fit.
     const prompt = `Write a short, genuine, specific paragraph (120-160 words) that ${candidateName} could paste into a cover letter or a LinkedIn "Easy Apply" note explaining why they're a strong fit for the JOB described below — NOT for any other role. Do not use generic filler phrases like "I am excited to apply" or "I believe I would be a great fit." Only reference skills/experience from the candidate's background that are actually relevant to THIS job; do not center the pitch on unrelated skills just because they're the candidate's strongest ones. Write in first person, as if ${candidateName} is speaking.
 
 JOB (write the pitch for this exact role):

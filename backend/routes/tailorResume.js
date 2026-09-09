@@ -15,10 +15,6 @@ function requireAuth(req, res, next) {
 }
 
 
-// =====================================================
-// SCRAPE THE JOB DESCRIPTION (same best-effort approach
-// used by the pitch generator)
-// =====================================================
 
 async function scrapeJobDescription(jobUrl) {
   if (!jobUrl) return "";
@@ -57,9 +53,6 @@ async function scrapeJobDescription(jobUrl) {
 }
 
 
-// =====================================================
-// CALL GEMINI
-// =====================================================
 
 async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -90,16 +83,6 @@ async function callGemini(prompt) {
   return text.trim();
 }
 
-
-// =====================================================
-// POST /api/tailor-resume
-// =====================================================
-// Uses the resume text already saved from the last time this
-// person uploaded a resume on the dashboard — no re-upload
-// needed. Rewrites that SAME resume — same facts, same
-// structure — with wording adjusted toward the target job's
-// real keywords. Never invents anything not already present
-// in the original text.
 
 router.post("/", requireAuth, async (req, res) => {
   if (!GEMINI_API_KEY) {

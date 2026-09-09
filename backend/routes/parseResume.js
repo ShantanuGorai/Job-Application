@@ -16,13 +16,6 @@ function requireAuth(req, res, next) {
 }
 
 
-// =====================================================
-// STORAGE — temp file, deleted after parsing
-// =====================================================
-// This endpoint doesn't save a permanent record (unlike
-// /api/career-profiles) — it's a live "upload → get job
-// matches right now" action, so the file is removed once
-// parser.py has read it.
 
 const tempDir = path.join(__dirname, "..", "uploads", "parse-temp");
 fs.mkdirSync(tempDir, { recursive: true });
@@ -44,7 +37,7 @@ const ALLOWED_MIME_TYPES = [
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, 
   fileFilter: (req, file, cb) => {
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true);
@@ -55,14 +48,6 @@ const upload = multer({
 });
 
 
-// =====================================================
-// EXPERIENCE-LEVEL BUCKET -> APPROX MONTHS
-// =====================================================
-// The career onboarding form collects a bucketed level
-// ("Entry Level (0-2 years)" etc.), but parser.py's job
-// search filters want a number of months. This maps one
-// to the other with a reasonable midpoint per bucket.
-
 const EXPERIENCE_BUCKET_TO_MONTHS = {
   "Entry Level (0-2 years)": 12,
   "Mid Level (3-5 years)": 48,
@@ -71,15 +56,6 @@ const EXPERIENCE_BUCKET_TO_MONTHS = {
 };
 
 
-// =====================================================
-// DIAGNOSE A FAILED PYTHON RUN
-// =====================================================
-// The old version always returned the same generic
-// "check requirements.txt" sentence no matter what
-// actually went wrong. This inspects the real stderr
-// (and the process's own error event) to say what to
-// fix, or — failing that — shows the real error instead
-// of hiding it.
 
 function diagnoseFailure({ pythonBin, stderr, exitCode }) {
   if (stderr.includes("ModuleNotFoundError") || stderr.includes("ImportError")) {
@@ -111,10 +87,6 @@ function diagnoseFailure({ pythonBin, stderr, exitCode }) {
 }
 
 
-// =====================================================
-// PARSE RESUME + FIND JOBS
-// =====================================================
-
 router.post("/", requireAuth, (req, res) => {
 
   upload.single("resume")(req, res, async (uploadError) => {
@@ -141,7 +113,6 @@ router.post("/", requireAuth, (req, res) => {
 
     const experienceMonths = EXPERIENCE_BUCKET_TO_MONTHS[experienceBucket] ?? 0;
 
-    // parser.py lives at the repo root, one level above backend/
     const repoRoot = path.join(__dirname, "..", "..");
     const pythonBin = process.env.PYTHON_BIN || "python3";
 
@@ -162,9 +133,6 @@ router.post("/", requireAuth, (req, res) => {
     let stdout = "";
     let stderr = "";
 
-    // Loading the NLP/embedding models fresh on every request is
-    // genuinely slow (10-30+ seconds is normal) — give it real
-    // headroom before giving up.
     const TIMEOUT_MS = 90_000;
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
@@ -181,11 +149,8 @@ router.post("/", requireAuth, (req, res) => {
     child.on("close", async (code) => {
       clearTimeout(timeout);
 
-      // Clean up the temp resume file regardless of outcome
       fs.unlink(resumePath, () => {});
 
-      // Always log the full stderr server-side, even when we're
-      // about to return a friendlier message to the client.
       if (stderr) {
         console.error(`[parser.py stderr]\n${stderr}`);
       }
@@ -197,8 +162,7 @@ router.post("/", requireAuth, (req, res) => {
         });
       }
 
-      // parser.py prints diagnostic lines too — only the LAST
-      // non-empty line of stdout is the JSON payload.
+
       const lines = stdout.split("\n").map((l) => l.trim()).filter(Boolean);
       const lastLine = lines[lines.length - 1];
 
@@ -222,10 +186,6 @@ router.post("/", requireAuth, (req, res) => {
         });
       }
 
-      // Save this as the user's current resume analysis. Upsert on
-      // `user` — re-uploading always overwrites the previous result,
-      // so GET /latest below reflects the most recent resume, and a
-      // page refresh doesn't lose it.
       try {
         await ParsedResume.findOneAndUpdate(
           { user: req.user._id },
@@ -253,8 +213,7 @@ router.post("/", requireAuth, (req, res) => {
           { upsert: true, new: true }
         );
       } catch (saveError) {
-        // Don't fail the whole request just because saving for later
-        // didn't work — the person still gets their results right now.
+
         console.error("Could not save parsed resume:", saveError);
       }
 
