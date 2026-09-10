@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FileEdit, Download, FileDown } from "lucide-react";
 import { jsPDF } from "jspdf";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface TailorResumeProps {
   jobTitle: string;
