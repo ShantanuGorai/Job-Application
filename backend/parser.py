@@ -4,8 +4,6 @@ import sys
 import json
 import urllib.parse
 from pathlib import Path
-import tkinter as tk
-from tkinter import filedialog
 from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
