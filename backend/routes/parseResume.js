@@ -113,7 +113,7 @@ router.post("/", requireAuth, (req, res) => {
 
     const experienceMonths = EXPERIENCE_BUCKET_TO_MONTHS[experienceBucket] ?? 0;
 
-    const repoRoot = path.join(__dirname, "..", "..");
+    const repoRoot = path.join(__dirname, "..");
     const pythonBin = process.env.PYTHON_BIN || "python3";
 
     const args = [
