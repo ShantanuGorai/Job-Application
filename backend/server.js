@@ -15,6 +15,7 @@ const generatePitchRoutes = require("./routes/generatePitch");
 const tailorResumeRoutes = require("./routes/tailorResume");
 
 const app = express();
+app.set("trust proxy", 1);
 
 connectDB();
 
@@ -34,7 +35,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
