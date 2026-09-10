@@ -24,7 +24,7 @@ import {
   AuthModal,
 } from "@/components/ui/auth-shared";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const signUpModalSteps = [
   {
@@ -124,9 +124,7 @@ export const AuthComponent = ({
   const isOtpComplete =
     otpDigits.every((d) => d !== "");
 
-  // =====================================================
-  // CONFETTI
-  // =====================================================
+
 
   const fireSideCanons = () => {
     const fire = confettiRef.current?.fire;
@@ -157,27 +155,19 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // GOOGLE SIGNUP
-  // =====================================================
 
   const handleGoogleSignup = () => {
     window.location.href =
       `${API_URL}/auth/google`;
   };
 
-  // =====================================================
-  // GITHUB SIGNUP
-  // =====================================================
 
   const handleGitHubSignup = () => {
     window.location.href =
       `${API_URL}/auth/github`;
   };
 
-  // =====================================================
-  // EMAIL → PASSWORD → CONFIRM
-  // =====================================================
+
 
   const handleProgressStep = () => {
 
@@ -197,9 +187,6 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // ENTER KEY
-  // =====================================================
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -210,16 +197,7 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // CONFIRM PASSWORD → TRIGGERS REAL SIGNUP + OTP EMAIL
-  // =====================================================
-  //
-  // This is the step that should actually call the backend.
-  // The backend's /auth/signup route hashes the password,
-  // creates (or updates) the unverified user, generates a
-  // real OTP, and emails it. Only once that succeeds do we
-  // move the user to the OTP screen.
-  // =====================================================
+
 
   const handleConfirmPasswordSubmit = async (
     e: React.FormEvent
@@ -283,8 +261,6 @@ export const AuthComponent = ({
         );
       }
 
-      // Signup succeeded and a real OTP has been emailed.
-      // Close the modal and move to the OTP step.
 
       setModalStatus("closed");
 
@@ -317,10 +293,7 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // OTP INPUT
-  // =====================================================
-
+ 
   const handleOtpChange = (
     index: number,
     value: string
@@ -345,9 +318,7 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // OTP KEYBOARD
-  // =====================================================
+ 
 
   const handleOtpKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -372,10 +343,6 @@ export const AuthComponent = ({
       handleOtpSubmit();
     }
   };
-
-  // =====================================================
-  // OTP PASTE
-  // =====================================================
 
   const handleOtpPaste = (
     e: React.ClipboardEvent<HTMLInputElement>
@@ -412,15 +379,6 @@ export const AuthComponent = ({
       ]?.focus();
     }
   };
-
-  // =====================================================
-  // VERIFY OTP API
-  // =====================================================
-  //
-  // Actually verifies the digits the user typed against the
-  // backend's /auth/verify-otp route, instead of just
-  // re-calling /auth/signup and treating any 200 as success.
-  // =====================================================
 
   const handleOtpSubmit = async () => {
 
@@ -474,7 +432,7 @@ export const AuthComponent = ({
         );
       }
 
-      // Verification succeeded — keep existing animation
+   
 
       setTimeout(() => {
 
@@ -482,7 +440,7 @@ export const AuthComponent = ({
 
         setModalStatus("success");
 
-        // Redirect to Hero page (client-side route, same app)
+    
         setTimeout(() => {
           navigate("/hero");
         }, 1200);
@@ -504,7 +462,7 @@ export const AuthComponent = ({
 
       setModalStatus("error");
 
-      // Clear the wrong OTP so the user can retype
+
       setOtpDigits(
         Array(OTP_LENGTH).fill("")
       );
@@ -515,9 +473,7 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // RESEND OTP
-  // =====================================================
+
 
   const handleResendOtp = async () => {
 
@@ -564,7 +520,7 @@ export const AuthComponent = ({
         otpRefs.current[0]?.focus();
       }, 300);
 
-      // Reset the "sent" label back to idle after a bit
+  
       setTimeout(() => {
         setResendStatus("idle");
       }, 5000);
@@ -587,10 +543,6 @@ export const AuthComponent = ({
       setResendStatus("idle");
     }
   };
-
-  // =====================================================
-  // GO BACK
-  // =====================================================
 
   const handleGoBack = () => {
 
@@ -618,18 +570,11 @@ export const AuthComponent = ({
     }
   };
 
-  // =====================================================
-  // CLOSE MODAL
-  // =====================================================
-
   const closeModal = () => {
     setModalStatus("closed");
     setModalErrorMessage("");
   };
 
-  // =====================================================
-  // AUTO FOCUS
-  // =====================================================
 
   useEffect(() => {
 
@@ -658,9 +603,6 @@ export const AuthComponent = ({
 
   }, [authStep]);
 
-  // =====================================================
-  // CONFETTI
-  // =====================================================
 
   useEffect(() => {
 
@@ -670,9 +612,7 @@ export const AuthComponent = ({
 
   }, [modalStatus]);
 
-  // =====================================================
-  // UI
-  // =====================================================
+
 
   return (
     <>

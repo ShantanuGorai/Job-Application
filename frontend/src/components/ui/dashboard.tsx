@@ -26,7 +26,7 @@ import { detectPlatform } from "@/lib/platforms";
 import { formatRelativeTime } from "@/lib/time";
 import TailorResume from "@/components/ui/tailor-resume";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface LiveJob {
   company: string;
