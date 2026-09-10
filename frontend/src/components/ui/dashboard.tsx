@@ -28,11 +28,6 @@ import TailorResume from "@/components/ui/tailor-resume";
 
 const API_URL = "http://localhost:5000";
 
-// =====================================================
-// TYPES — mirror backend/routes/parseResume.js output
-// (which itself mirrors parser.py's parse_resume_for_api)
-// =====================================================
-
 interface LiveJob {
   company: string;
   role: string;
@@ -109,9 +104,6 @@ const LOADING_MESSAGES = [
 
 type SortMode = "default" | "newest";
 
-// =====================================================
-// TYPEWRITER HOOK
-// =====================================================
 
 function useTypewriter(text: string, speed = 45) {
   const [displayed, setDisplayed] = useState("");
@@ -130,11 +122,6 @@ function useTypewriter(text: string, speed = 45) {
   return displayed;
 }
 
-// =====================================================
-// LIVE-UPDATING "X ago" LABEL
-// =====================================================
-// Re-renders periodically so "2m ago" naturally becomes
-// "3m ago", "1h ago", etc. without needing a page refresh.
 
 function RelativeTime({ date }: { date: string }) {
   const [, tick] = useState(0);
@@ -147,15 +134,7 @@ function RelativeTime({ date }: { date: string }) {
   return <>{formatRelativeTime(date)}</>;
 }
 
-// =====================================================
-// PARSE A HUMAN "posted" STRING INTO A SORTABLE NUMBER
-// =====================================================
-// LinkedIn's scraped listings give text like "3 days ago",
-// "1 week ago", "Recently posted", etc. — not a clean
-// number. This turns that into an approximate day count so
-// the "sort by newest" filter has something to sort on.
-// Gateway/search-link entries have no real posting date, so
-// they get Infinity and always sort to the end.
+
 
 function parsePostedToDays(posted: string): number {
   if (!posted) return Infinity;
@@ -177,9 +156,6 @@ function parsePostedToDays(posted: string): number {
   return Infinity;
 }
 
-// =====================================================
-// TURN A MatchSet INTO DISPLAYABLE JobEntry[]
-// =====================================================
 
 function buildJobEntries(
   matchSet: MatchSet,
@@ -222,9 +198,7 @@ function buildJobEntries(
   return { live, gateway };
 }
 
-// =====================================================
-// SETTINGS DROPDOWN (nav) — Account / Log out
-// =====================================================
+
 
 function SettingsMenu({
   onLogout,
@@ -312,9 +286,7 @@ function SettingsMenu({
   );
 }
 
-// =====================================================
-// SMALL PIECES
-// =====================================================
+
 
 function StatCard({
   icon,
@@ -404,6 +376,7 @@ function JobCard({
   onVisit,
   onToggleApplied,
   onGeneratePitch,
+  showTailorResume = true,
 }: {
   entry: JobEntry;
   index: number;
@@ -411,6 +384,7 @@ function JobCard({
   onVisit: (entry: JobEntry) => void;
   onToggleApplied: (entry: JobEntry, applied: boolean) => void;
   onGeneratePitch: (entry: JobEntry) => void;
+  showTailorResume?: boolean;
 }) {
   return (
     <motion.div
@@ -469,7 +443,9 @@ function JobCard({
             <Sparkles className="w-3.5 h-3.5" />
             Generate tailored pitch
           </button>
-          <TailorResume jobTitle={entry.title} company={entry.subtitle} jobUrl={entry.url} />
+          {showTailorResume && (
+            <TailorResume jobTitle={entry.title} company={entry.subtitle} jobUrl={entry.url} />
+          )}
         </div>
       )}
 
@@ -707,12 +683,14 @@ function JobGrid({
   onVisit,
   onToggleApplied,
   onGeneratePitch,
+  showTailorResume = true,
 }: {
   entries: JobEntry[];
   appliedMap: Record<string, string>;
   onVisit: (entry: JobEntry) => void;
   onToggleApplied: (entry: JobEntry, applied: boolean) => void;
   onGeneratePitch: (entry: JobEntry) => void;
+  showTailorResume?: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -725,6 +703,7 @@ function JobGrid({
           onVisit={onVisit}
           onToggleApplied={onToggleApplied}
           onGeneratePitch={onGeneratePitch}
+          showTailorResume={showTailorResume}
         />
       ))}
     </div>
@@ -740,6 +719,7 @@ function RoleMatchBlock({
   onVisit,
   onToggleApplied,
   onGeneratePitch,
+  showTailorResume = true,
 }: {
   title: string;
   subtitle?: string;
@@ -749,6 +729,7 @@ function RoleMatchBlock({
   onVisit: (entry: JobEntry) => void;
   onToggleApplied: (entry: JobEntry, applied: boolean) => void;
   onGeneratePitch: (entry: JobEntry) => void;
+  showTailorResume?: boolean;
 }) {
   if (liveEntries.length === 0 && gatewayEntries.length === 0) return null;
 
@@ -784,6 +765,7 @@ function RoleMatchBlock({
               onVisit={onVisit}
               onToggleApplied={onToggleApplied}
               onGeneratePitch={onGeneratePitch}
+              showTailorResume={showTailorResume}
             />
           </div>
         </div>
@@ -808,6 +790,7 @@ function RoleMatchBlock({
               onVisit={onVisit}
               onToggleApplied={onToggleApplied}
               onGeneratePitch={onGeneratePitch}
+              showTailorResume={showTailorResume}
             />
           </div>
         </div>
@@ -1357,6 +1340,7 @@ export default function Dashboard() {
                 onVisit={handleVisit}
                 onToggleApplied={handleToggleApplied}
                 onGeneratePitch={handleGeneratePitch}
+                showTailorResume={false}
               />
             )}
 

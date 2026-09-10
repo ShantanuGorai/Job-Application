@@ -57,3 +57,20 @@ ml f rameworks: scikit-learn
 numpy
 pandas
 databases & platforms:postgresql
+openai api
+ml & modeling:scikit-learn
+langchain
+xgboost
+chromadb
+pinecone
+semantic search
+llm & genai:llm integration
+feature engineering
+dimensionality reduction
+v ector & search:faiss
+embedding models
+time-series
+sentence transformers (huggingface)
+prompt engineering
+rag pipelines
+llamaindex
